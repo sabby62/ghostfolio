@@ -146,6 +146,12 @@ export class ConfigurationService {
       ROOT_URL: url({
         default: environment.rootUrl
       }),
+      SNAPTRADE_AUTH_MODE: str({
+        choices: ['commercial', 'personal'],
+        default: 'personal'
+      }),
+      SNAPTRADE_CLIENT_ID: str({ default: '' }),
+      SNAPTRADE_CONSUMER_KEY: str({ default: '' }),
       STRIPE_SECRET_KEY: str({ default: '' }),
       TRUST_PROXY: trustProxy({ default: '' }),
       TWITTER_ACCESS_TOKEN: str({ default: 'dummyAccessToken' }),

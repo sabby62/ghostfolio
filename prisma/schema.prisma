@@ -34,19 +34,20 @@ model Access {
 }
 
 model Account {
-  activities Order[]
-  balances   AccountBalance[]
-  comment    String?
-  createdAt  DateTime         @default(now())
-  currency   String?
-  id         String           @default(uuid())
-  name       String?
-  platform   Platform?        @relation(fields: [platformId], references: [id])
-  platformId String?
-  tags       TagsOnAccounts[]
-  updatedAt  DateTime         @updatedAt
-  user       User             @relation(fields: [userId], onDelete: Cascade, references: [id])
-  userId     String
+  activities        Order[]
+  balances          AccountBalance[]
+  comment           String?
+  createdAt         DateTime           @default(now())
+  currency          String?
+  id                String             @default(uuid())
+  name              String?
+  platform          Platform?          @relation(fields: [platformId], references: [id])
+  platformId        String?
+  snapTradeAccounts SnapTradeAccount[]
+  tags              TagsOnAccounts[]
+  updatedAt         DateTime           @updatedAt
+  user              User               @relation(fields: [userId], onDelete: Cascade, references: [id])
+  userId            String
 
   @@id([id, userId])
   @@index([currency])
@@ -254,6 +255,48 @@ model Settings {
   userId    String   @id
 }
 
+model SnapTradeAccount {
+  account            Account?                    @relation(fields: [accountId, accountUserId], onDelete: SetNull, references: [id, userId])
+  accountId          String?
+  accountUserId      String?
+  connection         SnapTradeConnection         @relation(fields: [connectionId], onDelete: Cascade, references: [id])
+  connectionId       String
+  createdAt          DateTime                    @default(now())
+  currency           String?
+  id                 String                      @id
+  importedActivities SnapTradeImportedActivity[]
+  institutionName    String?
+  isSyncEnabled      Boolean                     @default(true)
+  lastSyncError      String?
+  lastSyncedAt       DateTime?
+  name               String?
+  syncFromDate       DateTime?
+  updatedAt          DateTime                    @updatedAt
+
+  @@index([accountId, accountUserId])
+  @@index([connectionId])
+}
+
+model SnapTradeConnection {
+  accounts        SnapTradeAccount[]
+  createdAt       DateTime           @default(now())
+  id              String             @id @default(uuid())
+  snapTradeUserId String?
+  updatedAt       DateTime           @updatedAt
+  user            User               @relation(fields: [userId], onDelete: Cascade, references: [id])
+  userId          String             @unique
+  userSecret      String?
+}
+
+model SnapTradeImportedActivity {
+  activityId         String
+  createdAt          DateTime         @default(now())
+  snapTradeAccount   SnapTradeAccount @relation(fields: [snapTradeAccountId], onDelete: Cascade, references: [id])
+  snapTradeAccountId String
+
+  @@id([snapTradeAccountId, activityId])
+}
+
 model SymbolProfile {
   activities             Order[]
   assetClass             AssetClass?
@@ -336,27 +379,28 @@ model TagsOnAccounts {
 }
 
 model User {
-  accessesGet       Access[]           @relation("accessGet")
-  accessesGive      Access[]           @relation("accessGive")
-  accessToken       String?
-  accounts          Account[]
-  activities        Order[]
-  analytics         Analytics?
-  apiKeys           ApiKey[]
-  authChallenge     String?
-  authDevices       AuthDevice[]
-  createdAt         DateTime           @default(now())
-  id                String             @id @default(uuid())
-  provider          Provider           @default(ANONYMOUS)
-  rebalancingGroups RebalancingGroup[]
-  role              Role               @default(USER)
-  settings          Settings?
-  subscriptions     Subscription[]
-  tags              Tag[]
-  thirdPartyId      String?
-  updatedAt         DateTime           @updatedAt
-  watchlist         SymbolProfile[]    @relation("UserWatchlist")
-  SymbolProfile     SymbolProfile[]
+  accessesGet         Access[]             @relation("accessGet")
+  accessesGive        Access[]             @relation("accessGive")
+  accessToken         String?
+  accounts            Account[]
+  activities          Order[]
+  analytics           Analytics?
+  apiKeys             ApiKey[]
+  authChallenge       String?
+  authDevices         AuthDevice[]
+  createdAt           DateTime             @default(now())
+  id                  String               @id @default(uuid())
+  provider            Provider             @default(ANONYMOUS)
+  rebalancingGroups   RebalancingGroup[]
+  snapTradeConnection SnapTradeConnection?
+  role                Role                 @default(USER)
+  settings            Settings?
+  subscriptions       Subscription[]
+  tags                Tag[]
+  thirdPartyId        String?
+  updatedAt           DateTime             @updatedAt
+  watchlist           SymbolProfile[]      @relation("UserWatchlist")
+  SymbolProfile       SymbolProfile[]
 
   @@index([accessToken])
   @@index([createdAt])

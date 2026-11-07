@@ -272,3 +272,14 @@ export const SET_REBALANCING_GROUP_PARAMETERS = z.object({
       'All targets of the group, which replace the existing targets. The sum must not exceed 1, the rest is the target of the cash'
     )
 });
+
+export const SYNC_SNAPTRADE_ACCOUNTS_PARAMETERS = z.object({
+  snapTradeAccountIds: z
+    .array(z.string().min(1))
+    .min(1)
+    .max(MCP_MAX_ACCOUNTS)
+    .optional()
+    .describe(
+      'The identifiers of the SnapTrade accounts to sync as given by get-snaptrade-accounts, all linked accounts with an enabled sync if omitted'
+    )
+});

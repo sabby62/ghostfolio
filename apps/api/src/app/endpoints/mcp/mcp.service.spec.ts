@@ -1,4 +1,5 @@
 import { RebalancingService } from '@ghostfolio/api/app/endpoints/rebalancing/rebalancing.service';
+import { SnapTradeService } from '@ghostfolio/api/app/endpoints/snaptrade/snaptrade.service';
 import { CallerFacingError } from '@ghostfolio/api/errors/caller-facing.error';
 import { encodeDataSource } from '@ghostfolio/api/helper/data-source.helper';
 import { AccountBalanceService } from '@ghostfolio/api/services/account-balance/account-balance.service';
@@ -47,6 +48,7 @@ describe('McpService', () => {
   let mcpService: McpService;
   let portfolioTableService: PortfolioTableService;
   let rebalancingService: RebalancingService;
+  let snapTradeService: SnapTradeService;
   let symbolProfileService: SymbolProfileService;
   let symbolService: SymbolService;
   let userService: UserService;
@@ -105,6 +107,11 @@ describe('McpService', () => {
       updateGroup: jest.fn().mockResolvedValue({ id: 'group-id' })
     } as unknown as RebalancingService;
 
+    snapTradeService = {
+      getStatus: jest.fn().mockResolvedValue({ accounts: [] }),
+      syncAccounts: jest.fn().mockResolvedValue([])
+    } as unknown as SnapTradeService;
+
     symbolProfileService = {
       getSymbolProfilesOfUser: jest.fn().mockResolvedValue([])
     } as unknown as SymbolProfileService;
@@ -123,6 +130,7 @@ describe('McpService', () => {
       importService,
       portfolioTableService,
       rebalancingService,
+      snapTradeService,
       symbolProfileService,
       symbolService,
       userService
@@ -893,6 +901,32 @@ describe('McpService', () => {
         expect.objectContaining({ userId, id: 'group-id' })
       );
       expect(rebalancingService.createGroup).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('syncSnapTradeAccounts', () => {
+    it('Refuses a user without the permission to create an activity', async () => {
+      setupUser([]);
+
+      await expect(
+        mcpService.syncSnapTradeAccounts({ userId })
+      ).rejects.toThrow(HttpException);
+
+      expect(snapTradeService.syncAccounts).not.toHaveBeenCalled();
+    });
+
+    it('Syncs the given accounts', async () => {
+      setupUser([permissions.createActivity]);
+
+      await mcpService.syncSnapTradeAccounts({
+        userId,
+        snapTradeAccountIds: ['snaptrade-account-id']
+      });
+
+      expect(snapTradeService.syncAccounts).toHaveBeenCalledWith({
+        userId,
+        snapTradeAccountIds: ['snaptrade-account-id']
+      });
     });
   });
 });

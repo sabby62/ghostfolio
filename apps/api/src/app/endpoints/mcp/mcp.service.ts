@@ -1,4 +1,5 @@
 import { RebalancingService } from '@ghostfolio/api/app/endpoints/rebalancing/rebalancing.service';
+import { SnapTradeService } from '@ghostfolio/api/app/endpoints/snaptrade/snaptrade.service';
 import { CallerFacingError } from '@ghostfolio/api/errors/caller-facing.error';
 import {
   transformDataSourceInRequest,
@@ -31,6 +32,7 @@ import {
   IMPORT_ACTIVITIES_PARAMETERS,
   SEARCH_ASSET_PROFILES_PARAMETERS,
   SET_REBALANCING_GROUP_PARAMETERS,
+  SYNC_SNAPTRADE_ACCOUNTS_PARAMETERS,
   UPDATE_ACCOUNT_BALANCE_PARAMETERS
 } from './mcp.schemas';
 
@@ -44,6 +46,7 @@ export class McpService {
     private readonly importService: ImportService,
     private readonly portfolioTableService: PortfolioTableService,
     private readonly rebalancingService: RebalancingService,
+    private readonly snapTradeService: SnapTradeService,
     private readonly symbolProfileService: SymbolProfileService,
     private readonly symbolService: SymbolService,
     private readonly userService: UserService
@@ -270,6 +273,12 @@ export class McpService {
     return this.getJsonResult(group);
   }
 
+  public async getSnapTradeAccounts({ userId }: { userId: string }) {
+    return this.getJsonResult(
+      await this.snapTradeService.getStatus({ userId })
+    );
+  }
+
   public async getWatchlist({ userId }: { userId: string }) {
     const table = await this.portfolioTableService.getWatchlistTable({
       userId
@@ -360,6 +369,20 @@ export class McpService {
     );
 
     return this.getTextResult(JSON.stringify({ assetProfiles }, null, 2));
+  }
+
+  public async syncSnapTradeAccounts({
+    snapTradeAccountIds,
+    userId
+  }: z.infer<typeof SYNC_SNAPTRADE_ACCOUNTS_PARAMETERS> & { userId: string }) {
+    await this.getUserWithPermission({
+      userId,
+      permission: permissions.createActivity
+    });
+
+    return this.getJsonResult(
+      await this.snapTradeService.syncAccounts({ snapTradeAccountIds, userId })
+    );
   }
 
   public async updateAccountBalance({

@@ -222,6 +222,7 @@ describe('GhostfolioMcpController', () => {
       'get-performance',
       'get-portfolio',
       'get-rebalancing-groups',
+      'get-snaptrade-accounts',
       'get-watchlist'
     ]);
   });
@@ -245,10 +246,12 @@ describe('GhostfolioMcpController', () => {
       'get-performance',
       'get-portfolio',
       'get-rebalancing-groups',
+      'get-snaptrade-accounts',
       'get-watchlist',
       'import-activities',
       'search-asset-profiles',
       'set-rebalancing-group',
+      'sync-snaptrade-accounts',
       'update-account-balance'
     ]);
   });
@@ -272,6 +275,7 @@ describe('GhostfolioMcpController', () => {
       'get-portfolio',
       'get-rebalancing-drift',
       'get-rebalancing-groups',
+      'get-snaptrade-accounts',
       'get-watchlist'
     ]);
   });
@@ -295,10 +299,12 @@ describe('GhostfolioMcpController', () => {
       'get-portfolio',
       'get-rebalancing-drift',
       'get-rebalancing-groups',
+      'get-snaptrade-accounts',
       'get-watchlist',
       'import-activities',
       'search-asset-profiles',
       'set-rebalancing-group',
+      'sync-snaptrade-accounts',
       'update-account-balance'
     ]);
   });
@@ -372,6 +378,12 @@ describe('GhostfolioMcpController', () => {
     expect(
       getMetadataOfMethod<Scope[]>(REQUIRES_SCOPE_KEY, 'setRebalancingGroup')
     ).toEqual([scopes.accountUpdate]);
+  });
+
+  it('Requires the scope to create an activity for the tool to sync the SnapTrade accounts', () => {
+    expect(
+      getMetadataOfMethod<Scope[]>(REQUIRES_SCOPE_KEY, 'syncSnapTradeAccounts')
+    ).toEqual([scopes.activityCreate]);
   });
 
   it('Requires the scope to update an account for the tool to update the account balance', () => {

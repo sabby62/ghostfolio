@@ -22,6 +22,7 @@ import {
   IMPORT_ACTIVITIES_PARAMETERS,
   SEARCH_ASSET_PROFILES_PARAMETERS,
   SET_REBALANCING_GROUP_PARAMETERS,
+  SYNC_SNAPTRADE_ACCOUNTS_PARAMETERS,
   UPDATE_ACCOUNT_BALANCE_PARAMETERS
 } from './mcp.schemas';
 import { McpService } from './mcp.service';
@@ -198,6 +199,23 @@ export class GhostfolioMcpController {
     return this.mcpService.getRebalancingGroups({ userId });
   }
 
+  @RequiresScopeOfAccess(scopes.accountRead)
+  @Tool({
+    annotations: {
+      openWorldHint: false,
+      readOnlyHint: true,
+      title: 'Get SnapTrade accounts'
+    },
+    description:
+      'Gives whether SnapTrade is configured and connected, and the brokerage accounts of the SnapTrade connection with the Ghostfolio account each is linked to (accountId, null if not linked), whether its sync is enabled, the date from which its activities are imported, the time of its last sync and the error of its last sync.',
+    name: 'get-snaptrade-accounts'
+  })
+  public async getSnapTradeAccounts(
+    @Impersonation() { userId }: ImpersonationContext
+  ) {
+    return this.mcpService.getSnapTradeAccounts({ userId });
+  }
+
   @RequiresScopeOfAccess(scopes.watchlistRead)
   @Tool({
     annotations: {
@@ -271,6 +289,27 @@ export class GhostfolioMcpController {
     @Payload() parameters: z.infer<typeof SET_REBALANCING_GROUP_PARAMETERS>
   ) {
     return this.mcpService.setRebalancingGroup({ ...parameters, userId });
+  }
+
+  @RequiresScopeOfAccess(scopes.activityCreate)
+  @Tool({
+    annotations: {
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: true,
+      readOnlyHint: false,
+      title: 'Sync SnapTrade accounts'
+    },
+    description:
+      'Imports the new activities (buys, sells, dividends, interest and fees) of the brokerage accounts which are connected through SnapTrade into their linked Ghostfolio accounts and updates their cash balances. An activity is imported only once. Deposits, withdrawals and transfers are no activities, the cash balance covers them. Gives per account the number of the imported activities, the skipped activities by reason, the failed activities and the cash balance. Use this before a rebalancing to work with current holdings.',
+    name: 'sync-snaptrade-accounts',
+    parameters: SYNC_SNAPTRADE_ACCOUNTS_PARAMETERS
+  })
+  public async syncSnapTradeAccounts(
+    @Impersonation() { userId }: ImpersonationContext,
+    @Payload() parameters: z.infer<typeof SYNC_SNAPTRADE_ACCOUNTS_PARAMETERS>
+  ) {
+    return this.mcpService.syncSnapTradeAccounts({ ...parameters, userId });
   }
 
   @RequiresScopeOfAccess(scopes.accountUpdate)

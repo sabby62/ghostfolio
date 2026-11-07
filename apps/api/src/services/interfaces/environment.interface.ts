@@ -61,6 +61,9 @@ export interface Environment extends CleanedEnvAccessors {
   REDIS_TLS: boolean;
   REQUEST_TIMEOUT: number;
   ROOT_URL: string;
+  SNAPTRADE_AUTH_MODE: 'commercial' | 'personal';
+  SNAPTRADE_CLIENT_ID: string;
+  SNAPTRADE_CONSUMER_KEY: string;
   STRIPE_SECRET_KEY: string;
   TRUST_PROXY: boolean | number | string;
   TWITTER_ACCESS_TOKEN: string;

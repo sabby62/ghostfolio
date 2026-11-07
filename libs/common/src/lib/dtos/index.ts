@@ -12,6 +12,7 @@ import { CreateAssetProfileDto } from './create-asset-profile.dto';
 import { CreateOrderDto } from './create-order.dto';
 import { CreatePlatformDto } from './create-platform.dto';
 import { CreateRebalancingGroupDto } from './create-rebalancing-group.dto';
+import { CreateSnapTradeConnectionLinkDto } from './create-snaptrade-connection-link.dto';
 import { CreateTagDto } from './create-tag.dto';
 import { CreateUserDto } from './create-user.dto';
 import { CreateWatchlistItemDto } from './create-watchlist-item.dto';
@@ -21,6 +22,7 @@ import { MergeAssetProfileDto } from './merge-asset-profile.dto';
 import { RebalancingTargetDto } from './rebalancing-target.dto';
 import { ScraperConfigurationDto } from './scraper-configuration.dto';
 import { SectorDto } from './sector.dto';
+import { SyncSnapTradeAccountsDto } from './sync-snaptrade-accounts.dto';
 import { TransferBalanceDto } from './transfer-balance.dto';
 import { UpdateAccessDto } from './update-access.dto';
 import { UpdateAccountDto } from './update-account.dto';
@@ -33,6 +35,7 @@ import { UpdateOwnAccessTokenDto } from './update-own-access-token.dto';
 import { UpdatePlatformDto } from './update-platform.dto';
 import { UpdatePropertyDto } from './update-property.dto';
 import { UpdateRebalancingGroupDto } from './update-rebalancing-group.dto';
+import { UpdateSnapTradeAccountDto } from './update-snaptrade-account.dto';
 import { UpdateTagDto } from './update-tag.dto';
 import { UpdateUserSettingDto } from './update-user-setting.dto';
 
@@ -51,6 +54,7 @@ export {
   CreateOrderDto,
   CreatePlatformDto,
   CreateRebalancingGroupDto,
+  CreateSnapTradeConnectionLinkDto,
   CreateTagDto,
   CreateUserDto,
   CreateWatchlistItemDto,
@@ -60,6 +64,7 @@ export {
   RebalancingTargetDto,
   ScraperConfigurationDto,
   SectorDto,
+  SyncSnapTradeAccountsDto,
   TransferBalanceDto,
   UpdateAccessDto,
   UpdateAccountDto,
@@ -72,6 +77,7 @@ export {
   UpdatePlatformDto,
   UpdatePropertyDto,
   UpdateRebalancingGroupDto,
+  UpdateSnapTradeAccountDto,
   UpdateTagDto,
   UpdateUserSettingDto
 };

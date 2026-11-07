@@ -61,6 +61,7 @@ import { OAuthModule } from './endpoints/oauth/oauth.module';
 import { PlatformsModule } from './endpoints/platforms/platforms.module';
 import { PublicModule } from './endpoints/public/public.module';
 import { RebalancingModule } from './endpoints/rebalancing/rebalancing.module';
+import { SnapTradeModule } from './endpoints/snaptrade/snaptrade.module';
 import { SitemapModule } from './endpoints/sitemap/sitemap.module';
 import { SubscriptionModule } from './endpoints/subscription/subscription.module';
 import { SymbolsModule } from './endpoints/symbols/symbols.module';
@@ -153,6 +154,7 @@ import { PortfolioModule } from './portfolio/portfolio.module';
       serveRoot: '/.well-known'
     }),
     SitemapModule,
+    SnapTradeModule,
     SubscriptionModule,
     SymbolsModule,
     TagsModule,

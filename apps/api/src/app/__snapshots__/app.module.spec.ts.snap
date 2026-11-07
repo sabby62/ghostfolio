@@ -215,6 +215,19 @@ exports[`AppModule should keep the security of each route 1`] = `
       "account:update",
     ],
   },
+  "DELETE /snaptrade/connection": {
+    "guards": [
+      "AuthGuard('jwt')",
+      "HasPermissionGuard",
+      "ImpersonationGuard",
+      "ScopeGuard",
+    ],
+    "interceptors": [],
+    "permission": "createActivity",
+    "scopes": [
+      "activity:create",
+    ],
+  },
   "DELETE /tags/:id": {
     "allowDuringImpersonation": true,
     "guards": [
@@ -897,6 +910,32 @@ exports[`AppModule should keep the security of each route 1`] = `
     "guards": [],
     "interceptors": [],
   },
+  "GET /snaptrade/accounts": {
+    "guards": [
+      "AuthGuard('jwt')",
+      "HasPermissionGuard",
+      "ImpersonationGuard",
+      "ScopeGuard",
+    ],
+    "interceptors": [],
+    "permission": "createActivity",
+    "scopes": [
+      "activity:create",
+    ],
+  },
+  "GET /snaptrade/status": {
+    "guards": [
+      "AuthGuard('jwt')",
+      "HasPermissionGuard",
+      "ImpersonationGuard",
+      "ScopeGuard",
+    ],
+    "interceptors": [],
+    "permission": "createActivity",
+    "scopes": [
+      "account:read",
+    ],
+  },
   "GET /subscription/stripe/callback": {
     "allowDuringImpersonation": true,
     "guards": [],
@@ -1386,6 +1425,32 @@ exports[`AppModule should keep the security of each route 1`] = `
       "portfolio:read:values",
     ],
   },
+  "POST /snaptrade/connection-link": {
+    "guards": [
+      "AuthGuard('jwt')",
+      "HasPermissionGuard",
+      "ImpersonationGuard",
+      "ScopeGuard",
+    ],
+    "interceptors": [],
+    "permission": "createActivity",
+    "scopes": [
+      "activity:create",
+    ],
+  },
+  "POST /snaptrade/sync": {
+    "guards": [
+      "AuthGuard('jwt')",
+      "HasPermissionGuard",
+      "ImpersonationGuard",
+      "ScopeGuard",
+    ],
+    "interceptors": [],
+    "permission": "createActivity",
+    "scopes": [
+      "activity:create",
+    ],
+  },
   "POST /subscription/redeem-coupon": {
     "allowDuringImpersonation": true,
     "guards": [
@@ -1577,6 +1642,19 @@ exports[`AppModule should keep the security of each route 1`] = `
     "permission": "updateRebalancing",
     "scopes": [
       "account:update",
+    ],
+  },
+  "PUT /snaptrade/accounts/:id": {
+    "guards": [
+      "AuthGuard('jwt')",
+      "HasPermissionGuard",
+      "ImpersonationGuard",
+      "ScopeGuard",
+    ],
+    "interceptors": [],
+    "permission": "createActivity",
+    "scopes": [
+      "activity:create",
     ],
   },
   "PUT /tags/:id": {

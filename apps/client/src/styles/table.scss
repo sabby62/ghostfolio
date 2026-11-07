@@ -1,10 +1,24 @@
 @mixin gf-table($darkTheme: false) {
-  --mat-table-background-color: var(--light-background);
+  --mat-table-background-color: var(--gf-table-background);
 
   th {
     .mat-sort-header-container {
       justify-content: inherit;
     }
+  }
+
+  th.mat-mdc-header-cell {
+    color: rgba(
+      var(--palette-foreground-secondary-text),
+      var(--palette-foreground-secondary-text-alpha)
+    );
+    font-size: 0.8125rem;
+    font-weight: 500;
+  }
+
+  td.mat-mdc-cell,
+  td.mat-mdc-footer-cell {
+    font-variant-numeric: tabular-nums;
   }
 
   .mat-footer-row,
@@ -17,43 +31,33 @@
 
   .mat-mdc-footer-row {
     .mat-mdc-footer-cell {
-      border-top: 1px solid
-        rgba(
-          var(--palette-foreground-divider),
-          var(--palette-foreground-divider-alpha)
-        );
+      border-top: 1px solid var(--gf-border-color);
+      font-weight: 600;
     }
   }
 
   .mat-mdc-row {
-    &:nth-child(even) {
-      background-color: whitesmoke;
-    }
+    transition: background-color 120ms ease-in-out;
 
     &:hover {
-      background-color: #e6e6e6 !important;
+      background-color: rgba(var(--palette-foreground-base), 0.03) !important;
     }
   }
 
   @if $darkTheme {
-    --mat-table-background-color: var(--dark-background);
-
-    .mat-mdc-footer-row {
-      .mat-mdc-footer-cell {
-        border-top-color: rgba(
-          var(--palette-foreground-divider-dark),
-          var(--palette-foreground-divider-dark-alpha)
-        );
-      }
+    th.mat-mdc-header-cell {
+      color: rgba(
+        var(--palette-foreground-secondary-text-dark),
+        var(--palette-foreground-secondary-text-dark-alpha)
+      );
     }
 
     .mat-mdc-row {
-      &:nth-child(even) {
-        background-color: #222222;
-      }
-
       &:hover {
-        background-color: #303030 !important;
+        background-color: rgba(
+          var(--palette-foreground-base-dark),
+          0.04
+        ) !important;
       }
     }
   }

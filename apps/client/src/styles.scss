@@ -8,8 +8,12 @@
 @use 'svgmap/style.min';
 
 :root {
-  --dark-background: rgb(25, 25, 25);
+  // Surfaces (cards, dialogs, menus, header) and the page behind them
+  --dark-background: rgb(22, 26, 33);
   --font-family-sans-serif: 'Inter', Roboto, 'Helvetica Neue', sans-serif;
+  --gf-border-color: rgba(15, 23, 42, 0.08);
+  --gf-page-background: rgb(246, 247, 249);
+  --gf-page-background-dark: rgb(14, 17, 22);
   --light-background: rgb(255, 255, 255);
 
   --dark-primary-text:
@@ -125,44 +129,44 @@
   --palette-foreground-slider-off-active-dark: 255, 255, 255;
   --palette-foreground-slider-off-active-dark-alpha: 0.38;
 
-  --palette-primary-50: 231, 249, 249;
-  --palette-primary-100: 195, 241, 240;
-  --palette-primary-200: 155, 231, 230;
-  --palette-primary-300: 114, 221, 219;
-  --palette-primary-400: 84, 214, 212;
-  --palette-primary-500: 54, 207, 204;
-  --palette-primary-600: 48, 202, 199;
-  --palette-primary-700: 41, 195, 192;
-  --palette-primary-800: 34, 189, 185;
-  --palette-primary-900: 22, 178, 173;
-  --palette-primary-A100: 229, 255, 254;
-  --palette-primary-A200: 178, 255, 253;
-  --palette-primary-A400: 127, 255, 251;
-  --palette-primary-A700: 101, 255, 250;
+  --palette-primary-50: 236, 253, 245;
+  --palette-primary-100: 209, 250, 229;
+  --palette-primary-200: 167, 243, 208;
+  --palette-primary-300: 110, 231, 183;
+  --palette-primary-400: 52, 211, 153;
+  --palette-primary-500: 16, 185, 129;
+  --palette-primary-600: 5, 150, 105;
+  --palette-primary-700: 4, 120, 87;
+  --palette-primary-800: 6, 95, 70;
+  --palette-primary-900: 6, 78, 59;
+  --palette-primary-A100: 209, 250, 229;
+  --palette-primary-A200: 167, 243, 208;
+  --palette-primary-A400: 52, 211, 153;
+  --palette-primary-A700: 5, 150, 105;
   --palette-primary-contrast-50: 0, 0, 0, 0.87;
   --palette-primary-contrast-100: 0, 0, 0, 0.87;
   --palette-primary-contrast-200: 0, 0, 0, 0.87;
   --palette-primary-contrast-300: 0, 0, 0, 0.87;
   --palette-primary-contrast-400: 0, 0, 0, 0.87;
-  --palette-primary-contrast-500: 0, 0, 0, 0.87;
-  --palette-primary-contrast-600: 0, 0, 0, 0.87;
-  --palette-primary-contrast-700: 0, 0, 0, 0.87;
-  --palette-primary-contrast-800: 0, 0, 0, 0.87;
-  --palette-primary-contrast-900: 0, 0, 0, 0.87;
-  --palette-accent-50: 231, 240, 249;
-  --palette-accent-100: 195, 219, 241;
-  --palette-accent-200: 155, 195, 231;
-  --palette-accent-300: 114, 170, 221;
-  --palette-accent-400: 84, 152, 214;
-  --palette-accent-500: 54, 134, 207;
-  --palette-accent-600: 48, 126, 202;
-  --palette-accent-700: 41, 115, 195;
-  --palette-accent-800: 34, 105, 189;
-  --palette-accent-900: 22, 86, 178;
-  --palette-accent-A100: 229, 239, 255;
-  --palette-accent-A200: 178, 207, 255;
-  --palette-accent-A400: 127, 175, 255;
-  --palette-accent-A700: 101, 159, 255;
+  --palette-primary-contrast-500: 255, 255, 255, 1;
+  --palette-primary-contrast-600: 255, 255, 255, 1;
+  --palette-primary-contrast-700: 255, 255, 255, 1;
+  --palette-primary-contrast-800: 255, 255, 255, 1;
+  --palette-primary-contrast-900: 255, 255, 255, 1;
+  --palette-accent-50: 239, 246, 255;
+  --palette-accent-100: 219, 234, 254;
+  --palette-accent-200: 191, 219, 254;
+  --palette-accent-300: 147, 197, 253;
+  --palette-accent-400: 96, 165, 250;
+  --palette-accent-500: 59, 130, 246;
+  --palette-accent-600: 37, 99, 235;
+  --palette-accent-700: 29, 78, 216;
+  --palette-accent-800: 30, 64, 175;
+  --palette-accent-900: 30, 58, 138;
+  --palette-accent-A100: 219, 234, 254;
+  --palette-accent-A200: 191, 219, 254;
+  --palette-accent-A400: 96, 165, 250;
+  --palette-accent-A700: 37, 99, 235;
   --palette-accent-contrast-50: 0, 0, 0, 0.87;
   --palette-accent-contrast-100: 0, 0, 0, 0.87;
   --palette-accent-contrast-200: 0, 0, 0, 0.87;
@@ -200,11 +204,25 @@
 }
 
 body {
-  --ngx-skeleton-loader-base-color: #eff1f6;
+  --ngx-skeleton-loader-base-color: #eceef2;
 
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   font-family: var(--font-family-sans-serif);
   margin: 0;
   min-height: 100%;
+
+  &.theme-light {
+    --gf-table-background: var(--gf-page-background);
+
+    background: var(--gf-page-background);
+
+    .mat-mdc-card,
+    .mat-mdc-dialog-container,
+    .mat-mdc-menu-panel {
+      --gf-table-background: var(--light-background);
+    }
+  }
 
   a {
     color: var(--dark-primary-text);
@@ -229,9 +247,17 @@ body {
   }
 
   &.theme-dark {
-    --ngx-skeleton-loader-base-color: #323232;
+    --gf-border-color: rgba(255, 255, 255, 0.08);
+    --gf-table-background: var(--gf-page-background-dark);
+    --ngx-skeleton-loader-base-color: #232832;
 
-    background: var(--dark-background);
+    background: var(--gf-page-background-dark);
+
+    .mat-mdc-card,
+    .mat-mdc-dialog-container,
+    .mat-mdc-menu-panel {
+      --gf-table-background: var(--dark-background);
+    }
     color: rgba(var(--light-primary-text));
 
     a {
@@ -510,6 +536,75 @@ ngx-skeleton-loader {
   &.mat-mdc-select-disabled {
     .mat-mdc-select-placeholder {
       color: rgba(var(--dark-disabled-text));
+    }
+  }
+}
+
+// Modern look: typography, surfaces, header and navigation
+
+// The labels of values use .h6, hence it keeps the regular weight
+h1,
+h2,
+h3,
+h4,
+h5,
+.h1,
+.h2,
+.h3,
+.h4,
+.h5 {
+  font-weight: 600;
+  letter-spacing: -0.015em;
+}
+
+gf-value {
+  font-variant-numeric: tabular-nums;
+}
+
+.mat-mdc-card {
+  box-shadow: var(--gf-shadow-card);
+}
+
+.mat-mdc-fab {
+  box-shadow: var(--gf-shadow-raised) !important;
+}
+
+.mat-mdc-autocomplete-panel,
+.mat-mdc-select-panel {
+  border-radius: var(--gf-radius-md) !important;
+  box-shadow: var(--gf-shadow-raised) !important;
+}
+
+gf-header {
+  .mat-toolbar {
+    border-bottom: 1px solid var(--gf-border-color);
+  }
+}
+
+@media (min-width: 576px) {
+  gf-page-tabs {
+    .mat-mdc-tab-header {
+      .mat-mdc-tab-links {
+        .mat-mdc-tab-link {
+          border-radius: var(--gf-radius-sm) !important;
+
+          &.mdc-tab--active {
+            --mat-tab-active-focus-label-text-color: var(
+              --gf-theme-primary-500
+            );
+            --mat-tab-active-hover-label-text-color: var(
+              --gf-theme-primary-500
+            );
+            --mat-tab-active-label-text-color: var(--gf-theme-primary-500);
+
+            background-color: rgba(
+              var(--gf-theme-primary-500-rgb),
+              0.1
+            ) !important;
+            font-weight: 600 !important;
+          }
+        }
+      }
     }
   }
 }

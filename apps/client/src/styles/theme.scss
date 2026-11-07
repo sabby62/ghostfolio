@@ -7,53 +7,53 @@ $light-primary-text: white;
 $_palettes: (
   primary: (
     0: #000000,
-    10: #00201f,
-    20: #003736,
-    25: #004342,
-    30: #00504e,
-    35: #005d5b,
-    40: #006a68,
-    50: #008583,
-    60: #00a19f,
-    70: #11bebc,
-    80: #47dbd7,
-    90: #6bf7f4,
-    95: #affffc,
-    98: #e3fffd,
-    99: #f2fffe,
+    10: #002113,
+    20: #003824,
+    25: #00452d,
+    30: #005236,
+    35: #005f40,
+    40: #006c49,
+    50: #00885d,
+    60: #00a572,
+    70: #26c289,
+    80: #4edea3,
+    90: #6ffbbe,
+    95: #beffdb,
+    98: #e8ffef,
+    99: #f4fff6,
     100: #ffffff
   ),
   secondary: (
     0: #000000,
-    10: #001d36,
-    20: #003258,
-    25: #003d6a,
-    30: #00497c,
-    35: #00558f,
-    40: #0061a3,
-    50: #267bc3,
-    60: #4895df,
-    70: #66b0fb,
-    80: #9ecaff,
-    90: #d1e4ff,
-    95: #e9f1ff,
-    98: #f8f9ff,
-    99: #fdfcff,
+    10: #001a42,
+    20: #002e6a,
+    25: #00397f,
+    30: #004395,
+    35: #004fab,
+    40: #005ac2,
+    50: #2573e6,
+    60: #4d8eff,
+    70: #81aaff,
+    80: #adc6ff,
+    90: #d8e2ff,
+    95: #edf0ff,
+    98: #f9f9ff,
+    99: #fefbff,
     100: #ffffff
   ),
   tertiary: (
     0: #000000,
-    10: #031d35,
-    20: #1b324b,
-    25: #273d57,
-    30: #324863,
-    35: #3e546f,
-    40: #4a607b,
-    50: #637995,
-    60: #7c92b0,
-    70: #97adcc,
-    80: #b2c8e8,
-    90: #d2e4ff,
+    10: #0b1c30,
+    20: #213145,
+    25: #2d3c51,
+    30: #38485d,
+    35: #445369,
+    40: #505f76,
+    50: #68788f,
+    60: #8292aa,
+    70: #9cacc5,
+    80: #b7c8e1,
+    90: #d3e4fe,
     95: #eaf1ff,
     98: #f8f9ff,
     99: #fdfcff,
@@ -61,48 +61,48 @@ $_palettes: (
   ),
   neutral: (
     0: #000000,
-    10: #191c1c,
-    20: #2d3131,
-    25: #383c3c,
-    30: #444747,
-    35: #4f5353,
-    40: #5b5f5e,
-    50: #747877,
-    60: #8e9191,
-    70: #a9acab,
-    80: #c4c7c6,
-    90: #e0e3e2,
-    95: #eff1f0,
-    98: #f7faf9,
-    99: #fafdfc,
+    10: #191c20,
+    20: #2e3035,
+    25: #393b40,
+    30: #44474c,
+    35: #505258,
+    40: #5c5e64,
+    50: #75777d,
+    60: #8f9196,
+    70: #a9abb1,
+    80: #c5c6cc,
+    90: #e1e2e8,
+    95: #eff0f7,
+    98: #f8f9ff,
+    99: #fdfcff,
     100: #ffffff,
-    4: #0b0f0f,
-    6: #101414,
-    12: #1d2020,
-    17: #272b2a,
-    22: #323535,
-    24: #363a39,
-    87: #d8dada,
-    92: #e6e9e8,
-    94: #eceeed,
-    96: #f2f4f3
+    4: #0b0e13,
+    6: #111418,
+    12: #1d2024,
+    17: #272a2f,
+    22: #32353a,
+    24: #37393e,
+    87: #d8dae0,
+    92: #e7e8ee,
+    94: #ecedf4,
+    96: #f2f3fa
   ),
   neutral-variant: (
     0: #000000,
-    10: #141d1d,
-    20: #293232,
-    25: #343d3d,
-    30: #3f4948,
-    35: #4a5454,
-    40: #566060,
-    50: #6f7978,
-    60: #889392,
-    70: #a3adac,
-    80: #bec9c7,
-    90: #dae5e3,
-    95: #e8f3f2,
-    98: #f1fbfa,
-    99: #f4fefd,
+    10: #161c24,
+    20: #2b313a,
+    25: #363c45,
+    30: #414750,
+    35: #4d535c,
+    40: #595f69,
+    50: #727782,
+    60: #8b919c,
+    70: #a6abb6,
+    80: #c1c7d2,
+    90: #dde3ee,
+    95: #ecf1fd,
+    98: #f8f9ff,
+    99: #fdfcff,
     100: #ffffff
   ),
   error: (
@@ -197,7 +197,7 @@ $_dense-form-field-theme: mat.define-theme(
   @include mat.card-overrides(
     (
       outlined-container-color: var(--light-background),
-      outlined-outline-color: rgba(var(--dark-dividers)),
+      outlined-outline-color: var(--gf-border-color),
       title-text-line-height: 1.2
     )
   );
@@ -274,7 +274,7 @@ $_dense-form-field-theme: mat.define-theme(
   @include mat.card-overrides(
     (
       outlined-container-color: var(--dark-background),
-      outlined-outline-color: rgba(var(--light-dividers)),
+      outlined-outline-color: var(--gf-border-color),
       title-text-line-height: 1.2
     )
   );
@@ -298,7 +298,7 @@ $_dense-form-field-theme: mat.define-theme(
   @media (max-width: 575.98px) {
     @include mat.dialog-overrides(
       (
-        container-shape: 4px
+        container-shape: 12px
       )
     );
   }
@@ -339,10 +339,17 @@ $_dense-form-field-theme: mat.define-theme(
     )
   );
 
+  @include mat.card-overrides(
+    (
+      elevated-container-shape: var(--gf-radius-lg),
+      outlined-container-shape: var(--gf-radius-lg)
+    )
+  );
+
   @include mat.dialog-overrides(
     (
       container-max-width: 80vw,
-      container-shape: 8px,
+      container-shape: var(--gf-radius-lg),
       container-small-max-width: 96vw
     )
   );
@@ -355,8 +362,15 @@ $_dense-form-field-theme: mat.define-theme(
 
   @include mat.form-field-overrides(
     (
+      outlined-container-shape: var(--gf-radius-sm),
       outlined-focus-label-text-color: var(--gf-theme-primary-500),
       outlined-focus-outline-color: var(--gf-theme-primary-500)
+    )
+  );
+
+  @include mat.menu-overrides(
+    (
+      container-shape: var(--gf-radius-md)
     )
   );
 
@@ -442,9 +456,9 @@ $_dense-form-field-theme: mat.define-theme(
   .mat-warn {
     @include mat.button-overrides(
       (
-        filled-container-color: #f44336,
+        filled-container-color: var(--gf-theme-danger),
         filled-label-text-color: white,
-        outlined-label-text-color: #f44336
+        outlined-label-text-color: var(--gf-theme-danger)
       )
     );
   }
@@ -452,13 +466,31 @@ $_dense-form-field-theme: mat.define-theme(
 
 :root {
   --gf-theme-alpha-hover: 0.04;
-  --gf-theme-primary-500: #36cfcc;
-  --gf-theme-primary-500-rgb: 0, 187, 255;
-  --gf-theme-secondary-500: #3686cf;
-  --gf-theme-secondary-500-rgb: 78, 208, 94;
+  --gf-theme-danger: #e5484d;
+  // Emerald, a darker shade in the light theme for the contrast of white text
+  --gf-theme-primary-500: #059669;
+  --gf-theme-primary-500-rgb: 5, 150, 105;
+  --gf-theme-secondary-500: #3b82f6;
+  --gf-theme-secondary-500-rgb: 59, 130, 246;
+
+  // Shape and elevation
+  --gf-radius-sm: 10px;
+  --gf-radius-md: 12px;
+  --gf-radius-lg: 16px;
+  --gf-shadow-card:
+    0 1px 2px rgba(16, 24, 40, 0.04), 0 1px 3px rgba(16, 24, 40, 0.06);
+  --gf-shadow-raised:
+    0 4px 12px rgba(16, 24, 40, 0.08), 0 2px 4px rgba(16, 24, 40, 0.04);
 
   --mat-dialog-container-small-max-width: 96vw;
   --mat-button-filled-label-text-tracking: normal;
   --mat-button-outlined-label-text-tracking: normal;
   --mat-button-text-label-text-tracking: normal;
+}
+
+.theme-dark {
+  --gf-theme-primary-500: #10b981;
+  --gf-theme-primary-500-rgb: 16, 185, 129;
+  --gf-shadow-card: none;
+  --gf-shadow-raised: 0 4px 16px rgba(0, 0, 0, 0.4);
 }

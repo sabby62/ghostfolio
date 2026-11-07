@@ -17,18 +17,18 @@ export const ghostfolioFearAndGreedIndexDataSourceCryptocurrencies =
 export const ghostfolioFearAndGreedIndexSymbolCryptocurrencies = `${ghostfolioPrefix}_FEAR_AND_GREED_INDEX_CRYPTOCURRENCIES`;
 export const ghostfolioFearAndGreedIndexSymbolStocks = `${ghostfolioPrefix}_FEAR_AND_GREED_INDEX_STOCKS`;
 
-export const primaryColorHex = '#36cfcc';
+export const primaryColorHex = '#10b981';
 export const primaryColorRgb = {
-  r: 54,
-  g: 207,
-  b: 204
+  r: 16,
+  g: 185,
+  b: 129
 };
 
-export const secondaryColorHex = '#3686cf';
+export const secondaryColorHex = '#3b82f6';
 export const secondaryColorRgb = {
-  r: 54,
-  g: 134,
-  b: 207
+  r: 59,
+  g: 130,
+  b: 246
 };
 
 export const AI_ACTIVITIES_FILE_MAXIMUM_SIZE = 10 * 1024 * 1024;

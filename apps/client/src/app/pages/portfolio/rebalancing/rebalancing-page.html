@@ -263,7 +263,7 @@
           <mat-card appearance="outlined" class="mb-3">
             <mat-card-content class="align-items-center d-flex h-100">
               @if (drift.needsRebalancing) {
-                <div class="align-items-center d-flex text-warning">
+                <div class="align-items-center d-flex status-warning">
                   <ion-icon class="me-2" name="warning-outline" size="large" />
                   <span class="h5 mb-0" i18n>Rebalancing needed</span>
                 </div>
@@ -388,7 +388,7 @@
 
       @if (plan) {
         @for (warning of plan.warnings; track warning) {
-          <div class="mb-2 small text-warning">{{ warning }}</div>
+          <div class="mb-2 small status-warning">{{ warning }}</div>
         }
         @if (plan.trades.length === 0) {
           <p class="text-muted" i18n>

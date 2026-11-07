@@ -710,6 +710,7 @@ export class PortfolioService {
 
     for (const {
       activitiesCount,
+      averagePrice,
       dataSource,
       dateOfFirstActivity,
       dividend,
@@ -718,6 +719,7 @@ export class PortfolioService {
       grossPerformancePercentage,
       grossPerformancePercentageWithCurrencyEffect,
       investment,
+      investmentWithCurrencyEffect,
       marketPrice,
       netPerformance,
       netPerformancePercentage,
@@ -800,7 +802,9 @@ export class PortfolioService {
           grossPerformancePercentageWithCurrencyEffect?.toNumber() ?? 0,
         grossPerformanceWithCurrencyEffect:
           grossPerformanceWithCurrencyEffect?.toNumber() ?? 0,
+        averagePrice: averagePrice?.toNumber(),
         investment: investment.toNumber(),
+        investmentWithCurrencyEffect: investmentWithCurrencyEffect?.toNumber(),
         netPerformance: netPerformance?.toNumber() ?? 0,
         netPerformancePercent: netPerformancePercentage?.toNumber() ?? 0,
         netPerformancePercentWithCurrencyEffect:

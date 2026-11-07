@@ -99,7 +99,9 @@ export class GfRebalancingPageComponent {
     'current',
     'target',
     'drift',
-    'value'
+    'invested',
+    'value',
+    'gain'
   ];
   protected form?: GroupForm;
   protected groups: RebalancingGroup[] = [];

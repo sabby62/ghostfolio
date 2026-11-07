@@ -302,4 +302,82 @@ describe('RebalancingCalculator', () => {
       }).toThrow('must not be negative');
     });
   });
+
+  describe('cost and gain', () => {
+    it('gives the cost and the gain of each position', () => {
+      const drift = RebalancingCalculator.calculateDrift({
+        cashInBaseCurrency: 0,
+        driftThresholdInPercentage: 0.05,
+        holdings: [
+          {
+            ...xeqt,
+            investmentInBaseCurrency: 3000,
+            quantity: 100,
+            valueInBaseCurrency: 3500
+          },
+          {
+            ...xeqt,
+            investmentInBaseCurrency: 1000,
+            quantity: 30,
+            valueInBaseCurrency: 1050
+          },
+          { ...vfv, quantity: 10, valueInBaseCurrency: 1400 }
+        ],
+        targets: [{ ...xeqt, targetInPercentage: 1 }]
+      });
+
+      const xeqtDrift = drift.positions.find(({ symbol }) => {
+        return symbol === xeqt.symbol;
+      });
+      const vfvDrift = drift.positions.find(({ symbol }) => {
+        return symbol === vfv.symbol;
+      });
+
+      expect(xeqtDrift.investmentInBaseCurrency).toBe(4000);
+      expect(xeqtDrift.gainInBaseCurrency).toBe(550);
+
+      // Without cost, the value is the cost
+      expect(vfvDrift.investmentInBaseCurrency).toBe(1400);
+      expect(vfvDrift.gainInBaseCurrency).toBe(0);
+    });
+
+    it('updates the cost after the trades', () => {
+      const plan = RebalancingCalculator.calculatePlan({
+        cashInBaseCurrency: 0,
+        driftThresholdInPercentage: 0.05,
+        holdings: [
+          {
+            ...xeqt,
+            investmentInBaseCurrency: 6000,
+            quantity: 200,
+            valueInBaseCurrency: 8000
+          },
+          {
+            ...zag,
+            investmentInBaseCurrency: 1200,
+            quantity: 100,
+            valueInBaseCurrency: 1000
+          },
+          { ...msft, quantity: 2, valueInBaseCurrency: 1000 }
+        ],
+        mode: 'FULL',
+        targets: [
+          { ...xeqt, targetInPercentage: 0.6 },
+          { ...zag, targetInPercentage: 0.4 }
+        ]
+      });
+
+      const after = Object.fromEntries(
+        plan.after.positions.map(({ investmentInBaseCurrency, symbol }) => {
+          return [symbol, investmentInBaseCurrency];
+        })
+      );
+
+      // Sell 50 of 200 XEQT: a quarter of the cost goes
+      expect(after[xeqt.symbol]).toBe(4500);
+      // Buy 300 ZAG at 10
+      expect(after[zag.symbol]).toBe(4200);
+      expect(after[msft.symbol]).toBe(0);
+    });
+  });
 });

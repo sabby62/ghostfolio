@@ -5,6 +5,8 @@ export type RebalancingTradeAction = 'BUY' | 'SELL';
 export interface RebalancingHoldingInput {
   currency?: string;
   dataSource: string;
+  /** Cost of the holding in base currency */
+  investmentInBaseCurrency?: number;
   name?: string;
   priceInBaseCurrency?: number;
   quantity: number;
@@ -30,6 +32,10 @@ export interface RebalancingDriftPosition {
   /** Current minus target, e.g. 0.03 means 3 percentage points overweight */
   driftInPercentage: number;
   exceedsThreshold: boolean;
+  /** Value minus cost in base currency */
+  gainInBaseCurrency: number;
+  /** Cost in base currency */
+  investmentInBaseCurrency: number;
   /** False for a holding which has no target (its target is 0) */
   isTargeted: boolean;
   name?: string;

@@ -16,6 +16,7 @@ const VALUE_DECIMALS = 2;
 interface PositionState {
   currency?: string;
   dataSource: string;
+  investmentInBaseCurrency: number;
   isTargeted: boolean;
   name?: string;
   priceInBaseCurrency?: number;
@@ -350,6 +351,15 @@ export class RebalancingCalculator {
     quantity: number;
     quantityChanges: Map<PositionState, number>;
   }) {
+    if (quantity > 0) {
+      position.investmentInBaseCurrency +=
+        quantity * position.priceInBaseCurrency;
+    } else if (position.quantity > 0) {
+      // A sell reduces the cost in proportion to the quantity
+      position.investmentInBaseCurrency *=
+        1 - Math.min(1, -quantity / position.quantity);
+    }
+
     position.quantity += quantity;
     position.valueInBaseCurrency += quantity * position.priceInBaseCurrency;
 
@@ -396,6 +406,14 @@ export class RebalancingCalculator {
           driftInPercentage: RebalancingCalculator.round(driftInPercentage, 6),
           exceedsThreshold:
             Math.abs(driftInPercentage) > driftThresholdInPercentage + EPSILON,
+          gainInBaseCurrency: RebalancingCalculator.round(
+            position.valueInBaseCurrency - position.investmentInBaseCurrency,
+            VALUE_DECIMALS
+          ),
+          investmentInBaseCurrency: RebalancingCalculator.round(
+            position.investmentInBaseCurrency,
+            VALUE_DECIMALS
+          ),
           isTargeted: position.isTargeted,
           name: position.name,
           currentInPercentage: RebalancingCalculator.round(
@@ -489,6 +507,8 @@ export class RebalancingCalculator {
 
       if (existing) {
         // The same holding in several accounts
+        existing.investmentInBaseCurrency +=
+          holding.investmentInBaseCurrency ?? holding.valueInBaseCurrency;
         existing.quantity += holding.quantity;
         existing.valueInBaseCurrency += holding.valueInBaseCurrency;
         existing.priceInBaseCurrency =
@@ -497,6 +517,9 @@ export class RebalancingCalculator {
         positions.set(key, {
           currency: holding.currency,
           dataSource: holding.dataSource,
+          // Without cost, the value is the cost, hence no gain
+          investmentInBaseCurrency:
+            holding.investmentInBaseCurrency ?? holding.valueInBaseCurrency,
           isTargeted: false,
           name: holding.name,
           priceInBaseCurrency:
@@ -522,6 +545,7 @@ export class RebalancingCalculator {
         positions.set(key, {
           currency: target.currency,
           dataSource: target.dataSource,
+          investmentInBaseCurrency: 0,
           isTargeted: true,
           name: target.name,
           priceInBaseCurrency: target.priceInBaseCurrency,

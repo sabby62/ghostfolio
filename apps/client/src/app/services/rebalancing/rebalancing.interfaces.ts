@@ -18,6 +18,8 @@ export interface RebalancingDriftPosition {
   dataSource: string;
   driftInPercentage: number;
   exceedsThreshold: boolean;
+  gainInBaseCurrency: number;
+  investmentInBaseCurrency: number;
   isTargeted: boolean;
   name?: string;
   quantity: number;

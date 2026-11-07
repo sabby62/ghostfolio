@@ -12,6 +12,10 @@ export interface HoldingsTableItem
     Partial<
       Pick<
         PortfolioPosition,
-        'netPerformanceWithCurrencyEffect' | 'quantity' | 'valueInBaseCurrency'
+        | 'averagePrice'
+        | 'investmentWithCurrencyEffect'
+        | 'netPerformanceWithCurrencyEffect'
+        | 'quantity'
+        | 'valueInBaseCurrency'
       >
     > {}

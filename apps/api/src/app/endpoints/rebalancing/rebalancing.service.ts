@@ -289,6 +289,8 @@ export class RebalancingService {
       holdings.push({
         quantity,
         currency: assetProfile.currency,
+        investmentInBaseCurrency:
+          holding.investmentWithCurrencyEffect ?? holding.investment,
         dataSource: assetProfile.dataSource,
         name: assetProfile.name,
         symbol: assetProfile.symbol,

@@ -6,6 +6,8 @@ import { EnhancedAssetProfile } from './enhanced-asset-profile.interface';
 export interface PortfolioPosition {
   activitiesCount: number;
   allocationInPercentage: number;
+  /** Average cost per unit in the currency of the asset profile */
+  averagePrice?: number;
   assetProfile: Pick<
     EnhancedAssetProfile,
     | 'assetClass'
@@ -30,6 +32,8 @@ export interface PortfolioPosition {
   grossPerformancePercentWithCurrencyEffect: number;
   grossPerformanceWithCurrencyEffect: number;
   investment: number;
+  /** Cost of the holding in the base currency at the exchange rates of the activities */
+  investmentWithCurrencyEffect?: number;
   marketChange?: number;
   marketChangePercent?: number;
   marketPrice: number;

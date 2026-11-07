@@ -81,6 +81,7 @@ export class GfHoldingsTableComponent {
     }
 
     if (this.hasPermissionToShowValues()) {
+      columns.push('averagePrice', 'investmentWithCurrencyEffect');
       columns.push('valueInBaseCurrency');
     }
 

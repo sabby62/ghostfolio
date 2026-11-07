@@ -159,6 +159,7 @@ export const DEFAULT_REDACTED_PATHS = [
   'holdings[*].grossPerformance',
   'holdings[*].grossPerformanceWithCurrencyEffect',
   'holdings[*].investment',
+  'holdings[*].investmentWithCurrencyEffect',
   'holdings[*].netPerformance',
   'holdings[*].netPerformanceWithCurrencyEffect',
   'holdings[*].quantity',

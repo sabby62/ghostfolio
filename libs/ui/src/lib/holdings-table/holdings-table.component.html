@@ -110,6 +110,61 @@
       </td>
     </ng-container>
 
+    <ng-container matColumnDef="averagePrice">
+      <th
+        *matHeaderCellDef
+        class="d-none d-lg-table-cell justify-content-end px-1"
+        mat-header-cell
+        mat-sort-header
+      >
+        <ng-container i18n>Avg. Cost</ng-container>
+      </th>
+      <td
+        *matCellDef="let element"
+        class="d-none d-lg-table-cell px-1"
+        mat-cell
+      >
+        <div class="d-flex justify-content-end">
+          @if (!isCashPosition(element.assetProfile)) {
+            <gf-value
+              [isCurrency]="true"
+              [isLoading]="isLoading()"
+              [locale]="locale()"
+              [unit]="element.assetProfile.currency"
+              [value]="element.averagePrice"
+            />
+          }
+        </div>
+      </td>
+    </ng-container>
+
+    <ng-container matColumnDef="investmentWithCurrencyEffect">
+      <th
+        *matHeaderCellDef
+        class="d-none d-lg-table-cell justify-content-end px-1"
+        mat-header-cell
+        mat-sort-header
+      >
+        <ng-container i18n>Invested</ng-container>
+      </th>
+      <td
+        *matCellDef="let element"
+        class="d-none d-lg-table-cell px-1"
+        mat-cell
+      >
+        <div class="d-flex justify-content-end">
+          @if (!isCashPosition(element.assetProfile)) {
+            <gf-value
+              [isCurrency]="true"
+              [isLoading]="isLoading()"
+              [locale]="locale()"
+              [value]="element.investmentWithCurrencyEffect"
+            />
+          }
+        </div>
+      </td>
+    </ng-container>
+
     <ng-container matColumnDef="valueInBaseCurrency">
       <th
         *matHeaderCellDef

@@ -1,3 +1,4 @@
+import { RebalancingService } from '@ghostfolio/api/app/endpoints/rebalancing/rebalancing.service';
 import { CallerFacingError } from '@ghostfolio/api/errors/caller-facing.error';
 import {
   transformDataSourceInRequest,
@@ -14,6 +15,7 @@ import { SymbolService } from '@ghostfolio/api/services/symbol/symbol.service';
 import { UserService } from '@ghostfolio/api/services/user/user.service';
 import { getIntervalFromDateRange } from '@ghostfolio/common/calculation-helper';
 import { DEFAULT_LANGUAGE_CODE } from '@ghostfolio/common/config';
+import { RebalancingTargetDto } from '@ghostfolio/common/dtos';
 import { hasPermission, permissions } from '@ghostfolio/common/permissions';
 
 import { HttpException, Injectable } from '@nestjs/common';
@@ -21,11 +23,14 @@ import { getReasonPhrase, StatusCodes } from 'http-status-codes';
 import { z } from 'zod';
 
 import {
+  CALCULATE_REBALANCING_PARAMETERS,
   GET_ACCOUNTS_PARAMETERS,
   GET_ACTIVITIES_PARAMETERS,
   GET_PERFORMANCE_PARAMETERS,
+  GET_REBALANCING_DRIFT_PARAMETERS,
   IMPORT_ACTIVITIES_PARAMETERS,
   SEARCH_ASSET_PROFILES_PARAMETERS,
+  SET_REBALANCING_GROUP_PARAMETERS,
   UPDATE_ACCOUNT_BALANCE_PARAMETERS
 } from './mcp.schemas';
 
@@ -38,6 +43,7 @@ export class McpService {
     private readonly configurationService: ConfigurationService,
     private readonly importService: ImportService,
     private readonly portfolioTableService: PortfolioTableService,
+    private readonly rebalancingService: RebalancingService,
     private readonly symbolProfileService: SymbolProfileService,
     private readonly symbolService: SymbolService,
     private readonly userService: UserService
@@ -186,6 +192,84 @@ export class McpService {
     return this.getTextResult(table);
   }
 
+  public async calculateRebalancing({
+    allowFractionalShares,
+    groupId,
+    mode,
+    newCashInBaseCurrency,
+    userId
+  }: z.infer<typeof CALCULATE_REBALANCING_PARAMETERS> & { userId: string }) {
+    const plan = await this.rebalancingService.calculate({
+      userId,
+      data: { allowFractionalShares, mode, newCashInBaseCurrency },
+      id: groupId
+    });
+
+    return this.getJsonResult(plan);
+  }
+
+  public async getRebalancingDrift({
+    groupId,
+    userId
+  }: z.infer<typeof GET_REBALANCING_DRIFT_PARAMETERS> & { userId: string }) {
+    const drifts = groupId
+      ? [await this.rebalancingService.getDrift({ userId, id: groupId })]
+      : await this.rebalancingService.getDriftOfAllGroups({ userId });
+
+    if (drifts.length === 0) {
+      return this.getTextResult(
+        'No rebalancing groups found. Create one with set-rebalancing-group.'
+      );
+    }
+
+    return this.getJsonResult(drifts);
+  }
+
+  public async getRebalancingGroups({ userId }: { userId: string }) {
+    const groups = await this.rebalancingService.getGroups({ userId });
+
+    if (groups.length === 0) {
+      return this.getTextResult(
+        'No rebalancing groups found. Create one with set-rebalancing-group.'
+      );
+    }
+
+    return this.getJsonResult(groups);
+  }
+
+  public async setRebalancingGroup({
+    accountIds,
+    driftThresholdInPercentage,
+    groupId,
+    name,
+    targets,
+    userId
+  }: z.infer<typeof SET_REBALANCING_GROUP_PARAMETERS> & { userId: string }) {
+    await this.getUserWithPermission({
+      userId,
+      permission: permissions.updateRebalancing
+    });
+
+    const data = {
+      driftThresholdInPercentage,
+      name,
+      accountIds: accountIds ?? [],
+      targets: targets.map(({ dataSource, symbol, targetInPercentage }) => {
+        return { dataSource, symbol, targetInPercentage };
+      }) as RebalancingTargetDto[]
+    };
+
+    const group = groupId
+      ? await this.rebalancingService.updateGroup({
+          data,
+          userId,
+          id: groupId
+        })
+      : await this.rebalancingService.createGroup({ data, userId });
+
+    return this.getJsonResult(group);
+  }
+
   public async getWatchlist({ userId }: { userId: string }) {
     const table = await this.portfolioTableService.getWatchlistTable({
       userId
@@ -324,6 +408,10 @@ export class McpService {
       }),
       filterBySymbol: holding?.symbol
     };
+  }
+
+  private getJsonResult(value: unknown) {
+    return this.getTextResult(JSON.stringify(value, null, 2));
   }
 
   private getTextResult(text: string) {

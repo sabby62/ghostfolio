@@ -1,3 +1,4 @@
+import { RebalancingModule } from '@ghostfolio/api/app/endpoints/rebalancing/rebalancing.module';
 import { environment } from '@ghostfolio/api/environments/environment';
 import {
   getMcpUserOfBearerToken,
@@ -36,6 +37,7 @@ import { McpService } from './mcp.service';
     ConfigurationModule,
     ImportModule,
     PortfolioTableModule,
+    RebalancingModule,
     SymbolModule,
     SymbolProfileModule,
     UserModule
@@ -49,7 +51,7 @@ import { McpService } from './mcp.service';
         const { hostname } = new URL(configurationService.get('ROOT_URL'));
 
         const instructions =
-          'Ghostfolio is a wealth management application. The tools read the portfolio and the watchlist of the user who granted the access, import activities into the portfolio and update the cash balances of the accounts. They give the quantities and the monetary values only if the access has the permission "View" or "View and manage", otherwise no quantity and no monetary value (except the unit price of an activity). Only the tools which the permission of the access covers are listed. To import activities or to update a cash balance, the access needs the permission "Restricted view and manage" or "View and manage".';
+          'Ghostfolio is a wealth management application. The tools read the portfolio and the watchlist of the user who granted the access, import activities into the portfolio, update the cash balances of the accounts and manage the target allocations of the rebalancing groups, whose drift and rebalancing trades they calculate. They give the quantities and the monetary values only if the access has the permission "View" or "View and manage", otherwise no quantity and no monetary value (except the unit price of an activity). Only the tools which the permission of the access covers are listed. To import activities, to update a cash balance or to set a rebalancing group, the access needs the permission "Restricted view and manage" or "View and manage".';
 
         const instructionsOfBasicSubscription = `${instructions} The user who granted the access has the Basic subscription, hence the tool get-performance does not give these columns: ${PortfolioTableService.getAssetPerformanceInBaseCurrencyColumnNames().join(
           ', '

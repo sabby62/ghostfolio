@@ -221,6 +221,7 @@ describe('GhostfolioMcpController', () => {
       'get-activities',
       'get-performance',
       'get-portfolio',
+      'get-rebalancing-groups',
       'get-watchlist'
     ]);
   });
@@ -243,9 +244,11 @@ describe('GhostfolioMcpController', () => {
       'get-activities',
       'get-performance',
       'get-portfolio',
+      'get-rebalancing-groups',
       'get-watchlist',
       'import-activities',
       'search-asset-profiles',
+      'set-rebalancing-group',
       'update-account-balance'
     ]);
   });
@@ -262,10 +265,13 @@ describe('GhostfolioMcpController', () => {
         }
       })
     ).toEqual([
+      'calculate-rebalancing',
       'get-accounts',
       'get-activities',
       'get-performance',
       'get-portfolio',
+      'get-rebalancing-drift',
+      'get-rebalancing-groups',
       'get-watchlist'
     ]);
   });
@@ -282,13 +288,17 @@ describe('GhostfolioMcpController', () => {
         }
       })
     ).toEqual([
+      'calculate-rebalancing',
       'get-accounts',
       'get-activities',
       'get-performance',
       'get-portfolio',
+      'get-rebalancing-drift',
+      'get-rebalancing-groups',
       'get-watchlist',
       'import-activities',
       'search-asset-profiles',
+      'set-rebalancing-group',
       'update-account-balance'
     ]);
   });
@@ -348,6 +358,20 @@ describe('GhostfolioMcpController', () => {
     expect(
       getMetadataOfMethod<Scope[]>(REQUIRES_SCOPE_KEY, 'searchAssetProfiles')
     ).toEqual([scopes.activityCreate]);
+  });
+
+  it('Requires the scopes to read the values for the tools which calculate the rebalancing', () => {
+    for (const methodName of ['calculateRebalancing', 'getRebalancingDrift']) {
+      expect(
+        getMetadataOfMethod<Scope[]>(REQUIRES_SCOPE_KEY, methodName)
+      ).toEqual([scopes.portfolioRead, scopes.portfolioReadValues]);
+    }
+  });
+
+  it('Requires the scope to update an account for the tool to set a rebalancing group', () => {
+    expect(
+      getMetadataOfMethod<Scope[]>(REQUIRES_SCOPE_KEY, 'setRebalancingGroup')
+    ).toEqual([scopes.accountUpdate]);
   });
 
   it('Requires the scope to update an account for the tool to update the account balance', () => {

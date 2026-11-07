@@ -54,6 +54,7 @@ export const permissions = {
   readMarketDataOfOwnAssetProfile: 'readMarketDataOfOwnAssetProfile',
   readPlatforms: 'readPlatforms',
   readPlatformsWithAccountCount: 'readPlatformsWithAccountCount',
+  readRebalancing: 'readRebalancing',
   readTags: 'readTags',
   readWatchlist: 'readWatchlist',
   reportDataGlitch: 'reportDataGlitch',
@@ -68,6 +69,7 @@ export const permissions = {
   updateMarketDataOfOwnAssetProfile: 'updateMarketDataOfOwnAssetProfile',
   updateOwnAccessToken: 'updateOwnAccessToken',
   updatePlatform: 'updatePlatform',
+  updateRebalancing: 'updateRebalancing',
   updateTag: 'updateTag',
   updateUserSettings: 'updateUserSettings',
   updateViewMode: 'updateViewMode'
@@ -108,6 +110,7 @@ export function getPermissions(aRole: Role): string[] {
         permissions.readMarketDataOfOwnAssetProfile,
         permissions.readPlatforms,
         permissions.readPlatformsWithAccountCount,
+        permissions.readRebalancing,
         permissions.readTags,
         permissions.readWatchlist,
         permissions.updateAccount,
@@ -117,6 +120,7 @@ export function getPermissions(aRole: Role): string[] {
         permissions.updateMarketData,
         permissions.updateMarketDataOfOwnAssetProfile,
         permissions.updatePlatform,
+        permissions.updateRebalancing,
         permissions.updateTag,
         permissions.updateUserSettings,
         permissions.updateViewMode
@@ -128,6 +132,7 @@ export function getPermissions(aRole: Role): string[] {
         permissions.accessHoldingsChart,
         permissions.createUserAccount,
         permissions.readAiPrompt,
+        permissions.readRebalancing,
         permissions.readWatchlist
       ];
 
@@ -154,12 +159,14 @@ export function getPermissions(aRole: Role): string[] {
         permissions.readAiPrompt,
         permissions.readMarketDataOfOwnAssetProfile,
         permissions.readPlatforms,
+        permissions.readRebalancing,
         permissions.readWatchlist,
         permissions.updateAccount,
         permissions.updateAccess,
         permissions.updateActivity,
         permissions.updateAuthDevice,
         permissions.updateMarketDataOfOwnAssetProfile,
+        permissions.updateRebalancing,
         permissions.updateUserSettings,
         permissions.updateViewMode
       ];

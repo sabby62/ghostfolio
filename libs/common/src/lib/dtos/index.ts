@@ -1,4 +1,5 @@
 import { AuthDeviceDto } from './auth-device.dto';
+import { CalculateRebalancingDto } from './calculate-rebalancing.dto';
 import { CountryDto } from './country.dto';
 import { CreateAccessDto } from './create-access.dto';
 import { CreateAccountBalanceWithAccountIdDto } from './create-account-balance-with-account-id.dto';
@@ -10,12 +11,14 @@ import { CreateAssetProfileWithMarketDataDto } from './create-asset-profile-with
 import { CreateAssetProfileDto } from './create-asset-profile.dto';
 import { CreateOrderDto } from './create-order.dto';
 import { CreatePlatformDto } from './create-platform.dto';
+import { CreateRebalancingGroupDto } from './create-rebalancing-group.dto';
 import { CreateTagDto } from './create-tag.dto';
 import { CreateUserDto } from './create-user.dto';
 import { CreateWatchlistItemDto } from './create-watchlist-item.dto';
 import { DeleteOwnUserDto } from './delete-own-user.dto';
 import { HoldingDto } from './holding.dto';
 import { MergeAssetProfileDto } from './merge-asset-profile.dto';
+import { RebalancingTargetDto } from './rebalancing-target.dto';
 import { ScraperConfigurationDto } from './scraper-configuration.dto';
 import { SectorDto } from './sector.dto';
 import { TransferBalanceDto } from './transfer-balance.dto';
@@ -29,11 +32,13 @@ import { UpdateOrderDto } from './update-order.dto';
 import { UpdateOwnAccessTokenDto } from './update-own-access-token.dto';
 import { UpdatePlatformDto } from './update-platform.dto';
 import { UpdatePropertyDto } from './update-property.dto';
+import { UpdateRebalancingGroupDto } from './update-rebalancing-group.dto';
 import { UpdateTagDto } from './update-tag.dto';
 import { UpdateUserSettingDto } from './update-user-setting.dto';
 
 export {
   AuthDeviceDto,
+  CalculateRebalancingDto,
   CountryDto,
   CreateAccessDto,
   CreateAccountBalanceDto,
@@ -45,12 +50,14 @@ export {
   CreateAssetProfileWithMarketDataDto,
   CreateOrderDto,
   CreatePlatformDto,
+  CreateRebalancingGroupDto,
   CreateTagDto,
   CreateUserDto,
   CreateWatchlistItemDto,
   DeleteOwnUserDto,
   HoldingDto,
   MergeAssetProfileDto,
+  RebalancingTargetDto,
   ScraperConfigurationDto,
   SectorDto,
   TransferBalanceDto,
@@ -64,6 +71,7 @@ export {
   UpdateOwnAccessTokenDto,
   UpdatePlatformDto,
   UpdatePropertyDto,
+  UpdateRebalancingGroupDto,
   UpdateTagDto,
   UpdateUserSettingDto
 };

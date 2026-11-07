@@ -14,11 +14,14 @@ import { z } from 'zod';
 import 'zod/compile';
 
 import {
+  CALCULATE_REBALANCING_PARAMETERS,
   GET_ACCOUNTS_PARAMETERS,
   GET_ACTIVITIES_PARAMETERS,
   GET_PERFORMANCE_PARAMETERS,
+  GET_REBALANCING_DRIFT_PARAMETERS,
   IMPORT_ACTIVITIES_PARAMETERS,
   SEARCH_ASSET_PROFILES_PARAMETERS,
+  SET_REBALANCING_GROUP_PARAMETERS,
   UPDATE_ACCOUNT_BALANCE_PARAMETERS
 } from './mcp.schemas';
 import { McpService } from './mcp.service';
@@ -27,6 +30,25 @@ import { McpService } from './mcp.service';
 @UseFilters(McpToolExceptionFilter)
 export class GhostfolioMcpController {
   public constructor(private readonly mcpService: McpService) {}
+
+  @RequiresScopeOfAccess(scopes.portfolioRead, scopes.portfolioReadValues)
+  @Tool({
+    annotations: {
+      openWorldHint: true,
+      readOnlyHint: true,
+      title: 'Calculate rebalancing'
+    },
+    description:
+      'Calculates the trades which bring the holdings of a rebalancing group to its target allocation, like Passiv. All values are in the base currency of the user and all percentages are fractions (0.25 = 25%). BUY_ONLY (default) invests the cash balance of the accounts of the group plus the new cash without selling, FULL sells the overweight holdings and the holdings without target as well. The cash target (1 minus the sum of the targets) is kept as a reserve. Gives the trades (sells first), the drift before and after, the cash after and warnings, e.g. for a target without price. No trade is placed: the user places the trades at the broker.',
+    name: 'calculate-rebalancing',
+    parameters: CALCULATE_REBALANCING_PARAMETERS
+  })
+  public async calculateRebalancing(
+    @Impersonation() { userId }: ImpersonationContext,
+    @Payload() parameters: z.infer<typeof CALCULATE_REBALANCING_PARAMETERS>
+  ) {
+    return this.mcpService.calculateRebalancing({ ...parameters, userId });
+  }
 
   @RequiresScopeOfAccess(scopes.accountRead)
   @Tool({
@@ -140,6 +162,42 @@ export class GhostfolioMcpController {
     });
   }
 
+  @RequiresScopeOfAccess(scopes.portfolioRead, scopes.portfolioReadValues)
+  @Tool({
+    annotations: {
+      openWorldHint: true,
+      readOnlyHint: true,
+      title: 'Get rebalancing drift'
+    },
+    description:
+      'Gives the drift of the holdings of each rebalancing group from its target allocation, the largest drift first. The drift is the current minus the target allocation as a fraction (0.03 = 3 percentage points overweight). A holding without target has a target of 0. A position exceeds the threshold if the absolute drift is above the drift threshold of the group, and the group needs a rebalancing if any position exceeds it.',
+    name: 'get-rebalancing-drift',
+    parameters: GET_REBALANCING_DRIFT_PARAMETERS
+  })
+  public async getRebalancingDrift(
+    @Impersonation() { userId }: ImpersonationContext,
+    @Payload() parameters: z.infer<typeof GET_REBALANCING_DRIFT_PARAMETERS>
+  ) {
+    return this.mcpService.getRebalancingDrift({ ...parameters, userId });
+  }
+
+  @RequiresScopeOfAccess(scopes.portfolioRead)
+  @Tool({
+    annotations: {
+      openWorldHint: false,
+      readOnlyHint: true,
+      title: 'Get rebalancing groups'
+    },
+    description:
+      'Gives the rebalancing groups of the user with their accounts (all accounts if empty), their drift threshold and their target allocation. The targets are fractions of the group (0.25 = 25%), the rest is the target of the cash.',
+    name: 'get-rebalancing-groups'
+  })
+  public async getRebalancingGroups(
+    @Impersonation() { userId }: ImpersonationContext
+  ) {
+    return this.mcpService.getRebalancingGroups({ userId });
+  }
+
   @RequiresScopeOfAccess(scopes.watchlistRead)
   @Tool({
     annotations: {
@@ -192,6 +250,27 @@ export class GhostfolioMcpController {
     @Payload() parameters: z.infer<typeof SEARCH_ASSET_PROFILES_PARAMETERS>
   ) {
     return this.mcpService.searchAssetProfiles({ ...parameters, userId });
+  }
+
+  @RequiresScopeOfAccess(scopes.accountUpdate)
+  @Tool({
+    annotations: {
+      destructiveHint: true,
+      idempotentHint: true,
+      openWorldHint: false,
+      readOnlyHint: false,
+      title: 'Set rebalancing group'
+    },
+    description:
+      'Creates a rebalancing group, or replaces the group with the given identifier, with its accounts and its complete target allocation. Use search-asset-profiles or get-portfolio for the symbol and the data source of each target. The targets are fractions of the group (0.25 = 25%) and their sum must not exceed 1; the rest is the target of the cash. Confirm the targets with the user before calling this.',
+    name: 'set-rebalancing-group',
+    parameters: SET_REBALANCING_GROUP_PARAMETERS
+  })
+  public async setRebalancingGroup(
+    @Impersonation() { userId }: ImpersonationContext,
+    @Payload() parameters: z.infer<typeof SET_REBALANCING_GROUP_PARAMETERS>
+  ) {
+    return this.mcpService.setRebalancingGroup({ ...parameters, userId });
   }
 
   @RequiresScopeOfAccess(scopes.accountUpdate)

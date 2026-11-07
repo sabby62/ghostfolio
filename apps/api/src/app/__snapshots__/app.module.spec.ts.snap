@@ -202,6 +202,19 @@ exports[`AppModule should keep the security of each route 1`] = `
     "interceptors": [],
     "permission": "deletePlatform",
   },
+  "DELETE /rebalancing/groups/:id": {
+    "guards": [
+      "AuthGuard('jwt')",
+      "HasPermissionGuard",
+      "ImpersonationGuard",
+      "ScopeGuard",
+    ],
+    "interceptors": [],
+    "permission": "updateRebalancing",
+    "scopes": [
+      "account:update",
+    ],
+  },
   "DELETE /tags/:id": {
     "allowDuringImpersonation": true,
     "guards": [
@@ -826,6 +839,60 @@ exports[`AppModule should keep the security of each route 1`] = `
       "RedactValuesInResponseInterceptor",
     ],
   },
+  "GET /rebalancing/drift": {
+    "guards": [
+      "AuthGuard('jwt')",
+      "HasPermissionGuard",
+      "ImpersonationGuard",
+      "ScopeGuard",
+    ],
+    "interceptors": [],
+    "permission": "readRebalancing",
+    "scopes": [
+      "portfolio:read",
+      "portfolio:read:values",
+    ],
+  },
+  "GET /rebalancing/groups": {
+    "guards": [
+      "AuthGuard('jwt')",
+      "HasPermissionGuard",
+      "ImpersonationGuard",
+      "ScopeGuard",
+    ],
+    "interceptors": [],
+    "permission": "readRebalancing",
+    "scopes": [
+      "portfolio:read",
+    ],
+  },
+  "GET /rebalancing/groups/:id": {
+    "guards": [
+      "AuthGuard('jwt')",
+      "HasPermissionGuard",
+      "ImpersonationGuard",
+      "ScopeGuard",
+    ],
+    "interceptors": [],
+    "permission": "readRebalancing",
+    "scopes": [
+      "portfolio:read",
+    ],
+  },
+  "GET /rebalancing/groups/:id/drift": {
+    "guards": [
+      "AuthGuard('jwt')",
+      "HasPermissionGuard",
+      "ImpersonationGuard",
+      "ScopeGuard",
+    ],
+    "interceptors": [],
+    "permission": "readRebalancing",
+    "scopes": [
+      "portfolio:read",
+      "portfolio:read:values",
+    ],
+  },
   "GET /sitemap.xml (version neutral)": {
     "guards": [],
     "interceptors": [],
@@ -1292,6 +1359,33 @@ exports[`AppModule should keep the security of each route 1`] = `
     "interceptors": [],
     "permission": "createPlatform",
   },
+  "POST /rebalancing/groups": {
+    "guards": [
+      "AuthGuard('jwt')",
+      "HasPermissionGuard",
+      "ImpersonationGuard",
+      "ScopeGuard",
+    ],
+    "interceptors": [],
+    "permission": "updateRebalancing",
+    "scopes": [
+      "account:update",
+    ],
+  },
+  "POST /rebalancing/groups/:id/calculate": {
+    "guards": [
+      "AuthGuard('jwt')",
+      "HasPermissionGuard",
+      "ImpersonationGuard",
+      "ScopeGuard",
+    ],
+    "interceptors": [],
+    "permission": "readRebalancing",
+    "scopes": [
+      "portfolio:read",
+      "portfolio:read:values",
+    ],
+  },
   "POST /subscription/redeem-coupon": {
     "allowDuringImpersonation": true,
     "guards": [
@@ -1470,6 +1564,19 @@ exports[`AppModule should keep the security of each route 1`] = `
     "permission": "updateActivity",
     "scopes": [
       "activity:update",
+    ],
+  },
+  "PUT /rebalancing/groups/:id": {
+    "guards": [
+      "AuthGuard('jwt')",
+      "HasPermissionGuard",
+      "ImpersonationGuard",
+      "ScopeGuard",
+    ],
+    "interceptors": [],
+    "permission": "updateRebalancing",
+    "scopes": [
+      "account:update",
     ],
   },
   "PUT /tags/:id": {

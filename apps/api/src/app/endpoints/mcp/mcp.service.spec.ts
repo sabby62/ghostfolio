@@ -1,3 +1,4 @@
+import { RebalancingService } from '@ghostfolio/api/app/endpoints/rebalancing/rebalancing.service';
 import { CallerFacingError } from '@ghostfolio/api/errors/caller-facing.error';
 import { encodeDataSource } from '@ghostfolio/api/helper/data-source.helper';
 import { AccountBalanceService } from '@ghostfolio/api/services/account-balance/account-balance.service';
@@ -45,6 +46,7 @@ describe('McpService', () => {
   let importService: ImportService;
   let mcpService: McpService;
   let portfolioTableService: PortfolioTableService;
+  let rebalancingService: RebalancingService;
   let symbolProfileService: SymbolProfileService;
   let symbolService: SymbolService;
   let userService: UserService;
@@ -94,6 +96,15 @@ describe('McpService', () => {
       getWatchlistTable: jest.fn().mockResolvedValue('## Watchlist')
     } as unknown as PortfolioTableService;
 
+    rebalancingService = {
+      calculate: jest.fn().mockResolvedValue({ trades: [] }),
+      createGroup: jest.fn().mockResolvedValue({ id: 'group-id' }),
+      getDrift: jest.fn().mockResolvedValue({ id: 'group-id' }),
+      getDriftOfAllGroups: jest.fn().mockResolvedValue([]),
+      getGroups: jest.fn().mockResolvedValue([]),
+      updateGroup: jest.fn().mockResolvedValue({ id: 'group-id' })
+    } as unknown as RebalancingService;
+
     symbolProfileService = {
       getSymbolProfilesOfUser: jest.fn().mockResolvedValue([])
     } as unknown as SymbolProfileService;
@@ -111,6 +122,7 @@ describe('McpService', () => {
       configurationService,
       importService,
       portfolioTableService,
+      rebalancingService,
       symbolProfileService,
       symbolService,
       userService
@@ -783,6 +795,104 @@ describe('McpService', () => {
         balance: 1000,
         date: '2024-01-01'
       });
+    });
+  });
+
+  describe('calculateRebalancing', () => {
+    it('Passes the parameters of the tool to the rebalancing service', async () => {
+      await mcpService.calculateRebalancing({
+        userId,
+        allowFractionalShares: true,
+        groupId: 'group-id',
+        mode: 'FULL',
+        newCashInBaseCurrency: 500
+      });
+
+      expect(rebalancingService.calculate).toHaveBeenCalledWith({
+        userId,
+        data: {
+          allowFractionalShares: true,
+          mode: 'FULL',
+          newCashInBaseCurrency: 500
+        },
+        id: 'group-id'
+      });
+    });
+  });
+
+  describe('getRebalancingDrift', () => {
+    it('Gives the drift of all groups without a group', async () => {
+      const result = await mcpService.getRebalancingDrift({ userId });
+
+      expect(rebalancingService.getDriftOfAllGroups).toHaveBeenCalledWith({
+        userId
+      });
+      expect(rebalancingService.getDrift).not.toHaveBeenCalled();
+      expect(result.content[0].text).toContain('No rebalancing groups found');
+    });
+
+    it('Gives the drift of the given group', async () => {
+      await mcpService.getRebalancingDrift({ userId, groupId: 'group-id' });
+
+      expect(rebalancingService.getDrift).toHaveBeenCalledWith({
+        userId,
+        id: 'group-id'
+      });
+    });
+  });
+
+  describe('setRebalancingGroup', () => {
+    const parameters = {
+      userId,
+      name: 'TFSA',
+      targets: [
+        {
+          dataSource: DataSource.YAHOO,
+          symbol: 'XEQT.TO',
+          targetInPercentage: 1
+        }
+      ]
+    };
+
+    it('Refuses a user without the permission to update the rebalancing', async () => {
+      setupUser([]);
+
+      await expect(mcpService.setRebalancingGroup(parameters)).rejects.toThrow(
+        HttpException
+      );
+
+      expect(rebalancingService.createGroup).not.toHaveBeenCalled();
+      expect(rebalancingService.updateGroup).not.toHaveBeenCalled();
+    });
+
+    it('Creates a group without identifier', async () => {
+      setupUser([permissions.updateRebalancing]);
+
+      await mcpService.setRebalancingGroup(parameters);
+
+      expect(rebalancingService.createGroup).toHaveBeenCalledWith({
+        userId,
+        data: {
+          accountIds: [],
+          driftThresholdInPercentage: undefined,
+          name: 'TFSA',
+          targets: parameters.targets
+        }
+      });
+    });
+
+    it('Replaces the group with the identifier', async () => {
+      setupUser([permissions.updateRebalancing]);
+
+      await mcpService.setRebalancingGroup({
+        ...parameters,
+        groupId: 'group-id'
+      });
+
+      expect(rebalancingService.updateGroup).toHaveBeenCalledWith(
+        expect.objectContaining({ userId, id: 'group-id' })
+      );
+      expect(rebalancingService.createGroup).not.toHaveBeenCalled();
     });
   });
 });

@@ -199,3 +199,76 @@ export const UPDATE_ACCOUNT_BALANCE_PARAMETERS = z.object({
     })
     .describe('The date of the cash balance, as an ISO 8601 date')
 });
+
+const REBALANCING_GROUP_ID_PARAMETER = z
+  .string()
+  .trim()
+  .min(1)
+  .describe('The identifier of the rebalancing group, as given by a tool');
+
+export const CALCULATE_REBALANCING_PARAMETERS = z.object({
+  allowFractionalShares: z
+    .boolean()
+    .optional()
+    .describe(
+      'Whether fractional shares can be traded (default: false, whole shares only)'
+    ),
+  groupId: REBALANCING_GROUP_ID_PARAMETER,
+  mode: z
+    .enum(['BUY_ONLY', 'FULL'])
+    .optional()
+    .describe(
+      'BUY_ONLY invests the available cash without selling (default), FULL sells the overweight holdings and the holdings without target as well'
+    ),
+  newCashInBaseCurrency: z
+    .number()
+    .min(0)
+    .optional()
+    .describe(
+      'Cash to invest in addition to the cash balance of the accounts, in the base currency of the user (default: 0)'
+    )
+});
+
+export const GET_REBALANCING_DRIFT_PARAMETERS = z.object({
+  groupId: REBALANCING_GROUP_ID_PARAMETER.optional().describe(
+    'The identifier of the rebalancing group, all groups if omitted'
+  )
+});
+
+export const SET_REBALANCING_GROUP_PARAMETERS = z.object({
+  accountIds: z
+    .array(z.string().min(1))
+    .max(MCP_MAX_ACCOUNTS)
+    .optional()
+    .describe(
+      'The identifiers of the accounts of the group as given by get-accounts, all accounts if empty or omitted'
+    ),
+  driftThresholdInPercentage: z
+    .number()
+    .min(0)
+    .max(1)
+    .optional()
+    .describe(
+      'The drift from the target which needs a rebalancing, as a fraction (default: 0.05 for 5 percentage points)'
+    ),
+  groupId: REBALANCING_GROUP_ID_PARAMETER.optional().describe(
+    'The identifier of the rebalancing group to replace, a new group is created if omitted'
+  ),
+  name: z.string().trim().min(1).max(100).describe('The name of the group'),
+  targets: z
+    .array(
+      z.object({
+        dataSource: DATA_SOURCE_PARAMETER,
+        symbol: SYMBOL_PARAMETER,
+        targetInPercentage: z
+          .number()
+          .min(0)
+          .max(1)
+          .describe('The target as a fraction of the group, e.g. 0.25 for 25%')
+      })
+    )
+    .max(200)
+    .describe(
+      'All targets of the group, which replace the existing targets. The sum must not exceed 1, the rest is the target of the cash'
+    )
+});

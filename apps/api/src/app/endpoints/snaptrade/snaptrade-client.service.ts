@@ -64,7 +64,8 @@ export class SnapTradeClientService {
           accountId,
           limit: ACTIVITIES_PAGE_SIZE,
           offset: activities.length,
-          startDate: startDate?.toISOString()
+          // SnapTrade accepts a date without time (YYYY-MM-DD) only
+          startDate: startDate?.toISOString().slice(0, 10)
         } as never);
 
       const pageOfActivities = data?.data ?? [];

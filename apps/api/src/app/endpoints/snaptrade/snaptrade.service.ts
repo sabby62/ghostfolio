@@ -21,6 +21,7 @@ import { randomUUID } from 'node:crypto';
 
 import {
   SnapTradeActivity,
+  enrichJournalActivities,
   mapSnapTradeActivity
 } from './snaptrade-activity.mapper';
 import {
@@ -597,11 +598,13 @@ export class SnapTradeService {
 
       const startDate = this.getStartDate(snapTradeAccount);
 
-      const activities = (await this.snapTradeClientService.getActivities({
-        credentials,
-        startDate,
-        accountId: snapTradeAccount.id
-      })) as SnapTradeActivity[];
+      const activities = enrichJournalActivities(
+        (await this.snapTradeClientService.getActivities({
+          credentials,
+          startDate,
+          accountId: snapTradeAccount.id
+        })) as SnapTradeActivity[]
+      );
 
       const importedActivityIds = new Set(
         (

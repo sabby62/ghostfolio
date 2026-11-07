@@ -18,6 +18,8 @@ export interface SnapTradeActivity {
   symbol?: {
     currency?: { code?: string };
     description?: string | null;
+    exchange?: { suffix?: string | null } | null;
+    raw_symbol?: string;
     symbol?: string;
     type?: { code?: string };
   } | null;
@@ -30,7 +32,24 @@ export type SnapTradeActivityMappingResult =
   | { activity: CreateOrderDto; activityId: string }
   | { activityId: string; reason: string };
 
-const CASH_MOVEMENT_TYPES = ['CONTRIBUTION', 'TRANSFER', 'WITHDRAWAL'];
+// Cash movements and conversions between the currencies of the account (FXT)
+// and the daily cash adjustments of short positions (MKT, mark to market)
+const CASH_MOVEMENT_TYPES = [
+  'CONTRIBUTION',
+  'FXT',
+  'MKT',
+  'TRANSFER',
+  'WITHDRAWAL'
+];
+
+// Positions which move between accounts or between the listings of a
+// security, e.g. BRW (journal) of Questrade from DLR.TO to DLR.U.TO
+const POSITION_TRANSFER_TYPES = [
+  'BRW',
+  'INTERNAL_ASSET_TRANSFER_IN',
+  'INTERNAL_ASSET_TRANSFER_OUT',
+  'TRANSFER'
+];
 
 const COMMENT_PREFIX = 'SnapTrade';
 
@@ -78,7 +97,12 @@ export function mapSnapTradeActivity({
     return skip('Options are not supported');
   }
 
-  if (CASH_MOVEMENT_TYPES.includes(type)) {
+  const isPositionTransfer =
+    POSITION_TRANSFER_TYPES.includes(type) &&
+    !!activity.symbol?.symbol &&
+    Math.abs(activity.units ?? 0) > 0;
+
+  if (CASH_MOVEMENT_TYPES.includes(type) && !isPositionTransfer) {
     return skip('Cash movement (covered by the cash balance)');
   }
 
@@ -94,11 +118,45 @@ export function mapSnapTradeActivity({
   const fee = Math.abs(activity.fee ?? 0);
   const comment = getComment(activity);
 
+  if (isPositionTransfer) {
+    // Ghostfolio has no transfer of a position, hence it is recorded as a sell
+    // in the source and as a buy in the target at the book value, which
+    // realizes no gain
+    const symbol = getYahooFinanceSymbol(activity.symbol);
+    const quantity = Math.abs(activity.units);
+    const unitPrice =
+      Math.abs(activity.price ?? 0) > 0
+        ? Math.abs(activity.price)
+        : amount / quantity;
+
+    if (!(unitPrice > 0)) {
+      return skip(
+        'Transfer of a position without book value (record it manually)'
+      );
+    }
+
+    return {
+      activityId,
+      activity: {
+        accountId,
+        comment,
+        currency,
+        dataSource,
+        date,
+        quantity,
+        symbol,
+        unitPrice,
+        fee: 0,
+        type: activity.units < 0 ? ActivityType.SELL : ActivityType.BUY
+      }
+    };
+  }
+
   switch (type) {
     case 'BUY':
     case 'REI':
     case 'SELL': {
-      const symbol = activity.symbol?.symbol?.trim();
+      const symbol = getYahooFinanceSymbol(activity.symbol);
 
       if (!symbol) {
         return skip('Missing symbol');
@@ -148,7 +206,7 @@ export function mapSnapTradeActivity({
 
     case 'DIVIDEND':
     case 'SUBSTITUTE_DIVIDEND': {
-      const symbol = activity.symbol?.symbol?.trim();
+      const symbol = getYahooFinanceSymbol(activity.symbol);
       const dividend =
         amount > 0
           ? amount
@@ -179,6 +237,7 @@ export function mapSnapTradeActivity({
       };
     }
 
+    case 'FCH':
     case 'FEE':
     case 'INTEREST':
     case 'TAX': {
@@ -214,4 +273,111 @@ function getComment({ description }: SnapTradeActivity) {
   const text = description?.replace(/\s+/g, ' ').trim();
 
   return text ? `${COMMENT_PREFIX}: ${text}`.slice(0, 500) : COMMENT_PREFIX;
+}
+
+/**
+ * Gives the price of the journals (BRW) of Questrade, which move a position
+ * between the listings of a security in two currencies (e.g. DLR.TO in CAD to
+ * DLR.U.TO in USD, Norbert's gambit) without price. The incoming journal has
+ * the book value in CAD and the exchange rate in its description, e.g.
+ * "JOURNAL POSITION FROM CAD BOOK VALUE: $5132.22 CNV@ 1.3747", the outgoing
+ * journal of the same day and quantity gets the same book value.
+ */
+export function enrichJournalActivities(
+  activities: SnapTradeActivity[]
+): SnapTradeActivity[] {
+  const enrichedActivities = activities.map((activity) => {
+    return { ...activity };
+  });
+
+  const journals = enrichedActivities.filter(({ price, type, units }) => {
+    return type?.toUpperCase() === 'BRW' && !(price > 0) && units;
+  });
+
+  for (const incoming of journals) {
+    const bookValue = parseNumber(
+      /BOOK VALUE:?\s*\$?\s*([\d,]+(?:\.\d+)?)/i.exec(
+        incoming.description ?? ''
+      )?.[1]
+    );
+
+    if (!(incoming.units > 0) || !(bookValue > 0)) {
+      continue;
+    }
+
+    const exchangeRate = parseNumber(
+      /CNV@\s*([\d.]+)/i.exec(incoming.description ?? '')?.[1]
+    );
+
+    const getPrice = (activity: SnapTradeActivity) => {
+      const currency = (
+        activity.currency?.code ?? activity.symbol?.currency?.code
+      )?.toUpperCase();
+      const quantity = Math.abs(activity.units);
+
+      if (currency === 'CAD') {
+        return bookValue / quantity;
+      }
+
+      return exchangeRate > 0 ? bookValue / exchangeRate / quantity : undefined;
+    };
+
+    incoming.price = getPrice(incoming);
+
+    const outgoing = journals.find((journal) => {
+      return (
+        journal !== incoming &&
+        journal.units === -incoming.units &&
+        !(journal.price > 0) &&
+        getDay(journal) === getDay(incoming)
+      );
+    });
+
+    if (outgoing) {
+      outgoing.price = getPrice(outgoing);
+    }
+  }
+
+  return enrichedActivities;
+}
+
+/**
+ * Gives the ticker of Yahoo Finance, which writes the class of a share with a
+ * hyphen (DLR-U.TO, BRK-B), while SnapTrade writes it with a dot (DLR.U.TO,
+ * BRK.B)
+ */
+export function getYahooFinanceSymbol(symbol: SnapTradeActivity['symbol']) {
+  const ticker = symbol?.symbol?.trim();
+
+  if (!ticker) {
+    return undefined;
+  }
+
+  if (!symbol.raw_symbol && !symbol.exchange) {
+    // Without the exchange, the suffix cannot be told apart from the class
+    return ticker;
+  }
+
+  const suffix = symbol.exchange?.suffix?.replace(/^\./, '').trim();
+
+  let base = symbol.raw_symbol?.trim();
+
+  if (!base) {
+    base =
+      suffix && ticker.toUpperCase().endsWith(`.${suffix.toUpperCase()}`)
+        ? ticker.slice(0, -(suffix.length + 1))
+        : ticker;
+  }
+
+  base = base.replace(/\./g, '-');
+
+  return suffix ? `${base}.${suffix}` : base;
+}
+
+function getDay({ settlement_date, trade_date }: SnapTradeActivity) {
+  return (trade_date ?? settlement_date ?? '').slice(0, 10);
+}
+
+function parseNumber(value?: string) {
+  return value ? Number(value.replace(/,/g, '')) : undefined;
 }

@@ -2,6 +2,8 @@ import { DataSource } from '@prisma/client';
 
 import {
   SnapTradeActivity,
+  enrichJournalActivities,
+  getYahooFinanceSymbol,
   mapSnapTradeActivity
 } from './snaptrade-activity.mapper';
 
@@ -230,5 +232,190 @@ describe('mapSnapTradeActivity', () => {
     expect(
       map({ currency: { code: 'USD' }, trade_date: '2026-03-31', type: 'BUY' })
     ).toMatchObject({ reason: 'Missing identifier' });
+  });
+
+  it('skips currency conversions and mark to market as cash movements', () => {
+    for (const type of ['FXT', 'MKT']) {
+      expect(
+        map({
+          type,
+          amount: -232.39,
+          currency: { code: 'CAD' },
+          description: 'CONVERSION - CAD/USD',
+          id: `activity-${type}`,
+          trade_date: '2026-01-12T05:00:00Z'
+        })
+      ).toMatchObject({
+        reason: 'Cash movement (covered by the cash balance)'
+      });
+    }
+  });
+
+  it('maps a fee charge (FCH) to a fee', () => {
+    expect(
+      map({
+        amount: -9.95,
+        currency: { code: 'CAD' },
+        description: 'JOURNAL POSITION FEE',
+        id: 'fch',
+        trade_date: '2025-12-23T05:00:00Z',
+        type: 'FCH'
+      })
+    ).toMatchObject({
+      activity: { symbol: 'Fee', type: 'FEE', unitPrice: 9.95 }
+    });
+  });
+
+  it('maps a position which moves between accounts at its book value', () => {
+    const shop = {
+      currency: { code: 'USD' },
+      exchange: { suffix: null },
+      raw_symbol: 'SHOP',
+      symbol: 'SHOP'
+    };
+
+    expect(
+      map({
+        amount: -1260.08,
+        currency: { code: 'USD' },
+        id: 'out',
+        price: 0,
+        symbol: shop,
+        trade_date: '2026-01-15T05:00:00Z',
+        type: 'INTERNAL_ASSET_TRANSFER_OUT',
+        units: -8
+      })
+    ).toMatchObject({
+      activity: {
+        currency: 'USD',
+        fee: 0,
+        quantity: 8,
+        symbol: 'SHOP',
+        type: 'SELL',
+        unitPrice: 157.51
+      }
+    });
+
+    expect(
+      map({
+        amount: 1260.08,
+        currency: { code: 'USD' },
+        id: 'in',
+        price: 0,
+        symbol: shop,
+        trade_date: '2026-01-15T05:00:00Z',
+        type: 'INTERNAL_ASSET_TRANSFER_IN',
+        units: 8
+      })
+    ).toMatchObject({
+      activity: { quantity: 8, type: 'BUY', unitPrice: 157.51 }
+    });
+  });
+
+  it("maps a journal between the CAD and the USD listing (Norbert's gambit)", () => {
+    const activities = enrichJournalActivities([
+      {
+        amount: 0,
+        currency: { code: 'CAD' },
+        description: 'GLOBAL X US DLR CURRENCY ETF JOURNAL POSITION TO USD',
+        id: 'journal-out',
+        price: 0,
+        symbol: {
+          currency: { code: 'CAD' },
+          exchange: { suffix: 'TO' },
+          raw_symbol: 'DLR',
+          symbol: 'DLR.TO'
+        },
+        trade_date: '2025-12-23T05:00:00Z',
+        type: 'BRW',
+        units: -500
+      },
+      {
+        amount: 0,
+        currency: { code: 'USD' },
+        description:
+          'GLOBAL X US DLR CURRENCY ETF JOURNAL POSITION FROM CAD BOOK VALUE: $5132.22 CNV@ 1.3747',
+        id: 'journal-in',
+        price: 0,
+        symbol: {
+          currency: { code: 'USD' },
+          exchange: { suffix: 'TO' },
+          raw_symbol: 'DLR.U',
+          symbol: 'DLR.U.TO'
+        },
+        trade_date: '2025-12-23T05:00:00Z',
+        type: 'BRW',
+        units: 500
+      }
+    ]);
+
+    const [journalOut, journalIn] = activities.map((activity) => {
+      return map(activity);
+    });
+
+    expect(journalOut).toMatchObject({
+      activity: {
+        currency: 'CAD',
+        quantity: 500,
+        symbol: 'DLR.TO',
+        type: 'SELL'
+      }
+    });
+    expect(
+      'activity' in journalOut && journalOut.activity.unitPrice
+    ).toBeCloseTo(10.26444, 5);
+
+    expect(journalIn).toMatchObject({
+      activity: {
+        currency: 'USD',
+        quantity: 500,
+        symbol: 'DLR-U.TO',
+        type: 'BUY'
+      }
+    });
+    expect('activity' in journalIn && journalIn.activity.unitPrice).toBeCloseTo(
+      7.46667,
+      4
+    );
+  });
+
+  it('skips a journal without book value', () => {
+    const [journal] = enrichJournalActivities([
+      {
+        amount: 0,
+        currency: { code: 'CAD' },
+        id: 'journal',
+        price: 0,
+        symbol: { symbol: 'DLR.TO' },
+        trade_date: '2025-12-23T05:00:00Z',
+        type: 'BRW',
+        units: -500
+      }
+    ]);
+
+    expect(map(journal)).toMatchObject({
+      reason: 'Transfer of a position without book value (record it manually)'
+    });
+  });
+
+  it('gives the ticker of Yahoo Finance', () => {
+    expect(
+      getYahooFinanceSymbol({
+        exchange: { suffix: 'TO' },
+        raw_symbol: 'DLR.U',
+        symbol: 'DLR.U.TO'
+      })
+    ).toBe('DLR-U.TO');
+
+    expect(
+      getYahooFinanceSymbol({ exchange: { suffix: null }, symbol: 'BRK.B' })
+    ).toBe('BRK-B');
+
+    expect(
+      getYahooFinanceSymbol({ exchange: { suffix: '.TO' }, symbol: 'XEQT.TO' })
+    ).toBe('XEQT.TO');
+
+    expect(getYahooFinanceSymbol({ symbol: 'VTI' })).toBe('VTI');
+    expect(getYahooFinanceSymbol(null)).toBeUndefined();
   });
 });

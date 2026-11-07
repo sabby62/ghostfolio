@@ -39,6 +39,11 @@ export const internalRoutes = {
         },
         title: $localize`Access`
       },
+      brokerages: {
+        path: 'brokerages',
+        routerLink: ['/account', 'brokerages'],
+        title: $localize`Brokerages`
+      },
       membership: {
         path: 'membership',
         routerLink: ['/account', 'membership'],
@@ -218,6 +223,11 @@ export const internalRoutes = {
         path: 'fire',
         routerLink: ['/portfolio', 'fire'],
         title: 'FIRE'
+      },
+      rebalancing: {
+        path: 'rebalancing',
+        routerLink: ['/portfolio', 'rebalancing'],
+        title: $localize`Rebalancing`
       },
       xRay: {
         path: 'x-ray',

@@ -256,22 +256,23 @@ model Settings {
 }
 
 model SnapTradeAccount {
-  account            Account?                    @relation(fields: [accountId, accountUserId], onDelete: SetNull, references: [id, userId])
-  accountId          String?
-  accountUserId      String?
-  connection         SnapTradeConnection         @relation(fields: [connectionId], onDelete: Cascade, references: [id])
-  connectionId       String
-  createdAt          DateTime                    @default(now())
-  currency           String?
-  id                 String                      @id
-  importedActivities SnapTradeImportedActivity[]
-  institutionName    String?
-  isSyncEnabled      Boolean                     @default(true)
-  lastSyncError      String?
-  lastSyncedAt       DateTime?
-  name               String?
-  syncFromDate       DateTime?
-  updatedAt          DateTime                    @updatedAt
+  account                  Account?                    @relation(fields: [accountId, accountUserId], onDelete: SetNull, references: [id, userId])
+  accountId                String?
+  accountUserId            String?
+  brokerageAuthorizationId String?
+  connection               SnapTradeConnection         @relation(fields: [connectionId], onDelete: Cascade, references: [id])
+  connectionId             String
+  createdAt                DateTime                    @default(now())
+  currency                 String?
+  id                       String                      @id
+  importedActivities       SnapTradeImportedActivity[]
+  institutionName          String?
+  isSyncEnabled            Boolean                     @default(true)
+  lastSyncError            String?
+  lastSyncedAt             DateTime?
+  name                     String?
+  syncFromDate             DateTime?
+  updatedAt                DateTime                    @updatedAt
 
   @@index([accountId, accountUserId])
   @@index([connectionId])

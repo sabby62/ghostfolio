@@ -23,6 +23,10 @@ The linked accounts are synced every 6 hours (unless `ENABLE_FEATURE_CRON` is
 
 ## Setup
 
+In the app: **Settings → Brokerages** connects a brokerage, links the
+accounts, sets the import date, pauses the sync and syncs now. The same steps
+with the API:
+
 1. `POST /api/v1/snaptrade/connection-link` (optional body
    `{ "broker": "QUESTRADE" }`) gives a `redirectURI`. Open it and connect the
    brokerage in the SnapTrade connection portal. To fix a disabled connection,

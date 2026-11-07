@@ -1,5 +1,6 @@
 import { UserService } from '@ghostfolio/client/services/user/user.service';
 import { User } from '@ghostfolio/common/interfaces';
+import { hasPermission, permissions } from '@ghostfolio/common/permissions';
 import { internalRoutes } from '@ghostfolio/common/routes/routes';
 import {
   GfPageTabsComponent,
@@ -18,6 +19,7 @@ import {
   analyticsOutline,
   calculatorOutline,
   pieChartOutline,
+  scaleOutline,
   scanOutline,
   swapVerticalOutline
 } from 'ionicons/icons';
@@ -67,6 +69,16 @@ export class PortfolioPageComponent {
               routerLink: internalRoutes.portfolio.subRoutes.fire.routerLink
             },
             {
+              iconName: 'scale-outline',
+              label: internalRoutes.portfolio.subRoutes.rebalancing.title,
+              routerLink:
+                internalRoutes.portfolio.subRoutes.rebalancing.routerLink,
+              showCondition: hasPermission(
+                state.user.permissions,
+                permissions.readRebalancing
+              )
+            },
+            {
               iconName: 'scan-outline',
               label: internalRoutes.portfolio.subRoutes.xRay.title,
               routerLink: internalRoutes.portfolio.subRoutes.xRay.routerLink
@@ -82,6 +94,7 @@ export class PortfolioPageComponent {
       analyticsOutline,
       calculatorOutline,
       pieChartOutline,
+      scaleOutline,
       scanOutline,
       swapVerticalOutline
     });

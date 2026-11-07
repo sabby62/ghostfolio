@@ -27,6 +27,7 @@ describe('SnapTradeService', () => {
   const snapTradeAccount = {
     accountId: 'account-id',
     accountUserId: userId,
+    brokerageAuthorizationId: 'brokerage-authorization-id',
     connectionId: 'connection-id',
     createdAt: new Date(),
     currency: 'CAD',
@@ -253,7 +254,7 @@ describe('SnapTradeService', () => {
       // The time of the last sync stays, hence the next sync retries the
       // failed activity
       expect(prismaService.snapTradeAccount.update).toHaveBeenCalledWith({
-        data: { lastSyncError: '1 activities could not be imported' },
+        data: { lastSyncError: '1 activity could not be imported' },
         where: { id: 'snaptrade-account-id' }
       });
     });

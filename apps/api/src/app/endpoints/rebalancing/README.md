@@ -10,6 +10,9 @@ All percentages are fractions (`0.25` = 25%) and all values are in the base
 currency of the user. The rest of the targets (`1 - sum`) is the target of the
 cash, which is kept as a reserve.
 
+In the app: **Portfolio → Rebalancing** manages the groups and their targets,
+shows the drift and calculates the trades.
+
 ## REST API (`/api/v1/rebalancing`)
 
 | Method | Path                    | Description                             |

@@ -1,0 +1,495 @@
+<div class="container">
+  <h2 class="d-none d-sm-block h3 mb-3 text-center" i18n>Rebalancing</h2>
+  <p class="mb-4 text-center text-muted" i18n>
+    Set a target allocation for a group of accounts, see how far your holdings
+    have drifted and get the trades to rebalance them. No trade is placed
+    automatically.
+  </p>
+
+  @if (form) {
+    <!-- Group editor -->
+    <mat-card appearance="outlined" class="mb-4">
+      <mat-card-content>
+        <h3 class="h5 mb-3">
+          @if (form.id) {
+            <span i18n>Edit Rebalancing Group</span>
+          } @else {
+            <span i18n>New Rebalancing Group</span>
+          }
+        </h3>
+
+        <div class="row">
+          <div class="col-md-5">
+            <mat-form-field appearance="outline" class="w-100">
+              <mat-label i18n>Name</mat-label>
+              <input matInput [(ngModel)]="form.name" />
+            </mat-form-field>
+          </div>
+          <div class="col-md-5">
+            <mat-form-field appearance="outline" class="w-100">
+              <mat-label i18n>Accounts</mat-label>
+              <mat-select multiple [(ngModel)]="form.accountIds">
+                @for (account of accounts; track account.id) {
+                  <mat-option [value]="account.id">{{
+                    account.name || '–'
+                  }}</mat-option>
+                }
+              </mat-select>
+              <mat-hint i18n>All accounts if none is selected</mat-hint>
+            </mat-form-field>
+          </div>
+          <div class="col-md-2">
+            <mat-form-field appearance="outline" class="w-100">
+              <mat-label i18n>Drift Threshold</mat-label>
+              <input
+                matInput
+                max="100"
+                min="0"
+                step="0.5"
+                type="number"
+                [(ngModel)]="form.driftThreshold"
+              />
+              <span matTextSuffix>%</span>
+            </mat-form-field>
+          </div>
+        </div>
+
+        <h4 class="h6 mt-2" i18n>Target Allocation</h4>
+        @if (form.targets.length === 0) {
+          <p class="text-muted" i18n>
+            Add the holdings of the target allocation from your portfolio or by
+            searching for a symbol.
+          </p>
+        } @else {
+          <div class="overflow-x-auto">
+            <table class="gf-table mb-2 w-100">
+              <tbody>
+                @for (
+                  target of form.targets;
+                  track target.symbol;
+                  let i = $index
+                ) {
+                  <tr>
+                    <td class="px-1 py-1">
+                      <div>{{ target.name }}</div>
+                      <div class="small text-muted">
+                        {{ target.symbol }} · {{ target.dataSource }}
+                      </div>
+                    </td>
+                    <td class="px-1 py-1 text-end">
+                      <mat-form-field
+                        appearance="outline"
+                        class="number-input without-hint"
+                      >
+                        <input
+                          matInput
+                          max="100"
+                          min="0"
+                          step="0.5"
+                          type="number"
+                          [(ngModel)]="target.target"
+                        />
+                        <span matTextSuffix>%</span>
+                      </mat-form-field>
+                    </td>
+                    <td class="px-1 py-1 text-end">
+                      <button
+                        mat-icon-button
+                        title="Remove"
+                        type="button"
+                        (click)="onRemoveTarget(i)"
+                      >
+                        <ion-icon name="trash-outline" />
+                      </button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+
+        <div
+          class="mb-3"
+          [class.text-danger]="targetSum > 100"
+          [class.text-muted]="targetSum <= 100"
+        >
+          <span i18n>Total</span>: {{ targetSum.toFixed(2) }}% ·
+          <span i18n>Cash</span>: {{ cashTarget.toFixed(2) }}%
+          @if (targetSum > 100) {
+            · <span i18n>The total must not exceed 100%</span>
+          }
+        </div>
+
+        <div class="row">
+          <div class="col-md-6">
+            <div class="align-items-center d-flex">
+              <mat-form-field appearance="outline" class="flex-grow-1">
+                <mat-label i18n>Add a holding of your portfolio</mat-label>
+                <mat-select [(ngModel)]="holdingToAdd">
+                  @for (
+                    holding of availableHoldings;
+                    track holding.assetProfile.symbol
+                  ) {
+                    <mat-option [value]="holding">
+                      {{ holding.assetProfile.name }}
+                      ({{ holding.assetProfile.symbol }})
+                    </mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+              <button
+                class="mb-3 ms-2"
+                mat-stroked-button
+                type="button"
+                [disabled]="!holdingToAdd"
+                (click)="onAddHolding()"
+              >
+                <ion-icon class="me-1" name="add-outline" />
+                <span i18n>Add</span>
+              </button>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <mat-form-field appearance="outline" class="w-100">
+              <mat-label i18n>Or search for a symbol</mat-label>
+              <gf-symbol-autocomplete [formControl]="searchControl" />
+            </mat-form-field>
+          </div>
+        </div>
+
+        <div class="button-row d-flex justify-content-end">
+          <button mat-button type="button" (click)="onCancelEdit()">
+            <span i18n>Cancel</span>
+          </button>
+          <button
+            color="primary"
+            mat-flat-button
+            type="button"
+            [disabled]="!isFormValid || isSaving"
+            (click)="onSaveGroup()"
+          >
+            <span i18n>Save</span>
+          </button>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  } @else if (!isLoadingGroups && groups.length === 0) {
+    <!-- Empty state -->
+    <div class="mb-5 text-center">
+      <p i18n>You have no rebalancing group yet.</p>
+      @if (hasPermissionToUpdate) {
+        <button color="primary" mat-flat-button (click)="onCreateGroup()">
+          <ion-icon class="me-1" name="add-outline" />
+          <span i18n>Create Rebalancing Group</span>
+        </button>
+      }
+    </div>
+  } @else if (groups.length > 0) {
+    <!-- Group selection -->
+    <div class="align-items-center button-row d-flex flex-wrap mb-3">
+      <mat-form-field appearance="outline" class="group-selector without-hint">
+        <mat-label i18n>Rebalancing Group</mat-label>
+        <mat-select
+          [value]="selectedGroupId"
+          (selectionChange)="onSelectGroup($event.value)"
+        >
+          @for (group of groups; track group.id) {
+            <mat-option [value]="group.id">{{ group.name }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+      @if (hasPermissionToUpdate) {
+        <button mat-stroked-button (click)="onEditGroup()">
+          <ion-icon class="me-1" name="create-outline" />
+          <span i18n>Edit</span>
+        </button>
+        <button mat-stroked-button (click)="onCreateGroup()">
+          <ion-icon class="me-1" name="add-outline" />
+          <span i18n>New</span>
+        </button>
+        <button color="warn" mat-stroked-button (click)="onDeleteGroup()">
+          <ion-icon class="me-1" name="trash-outline" />
+          <span i18n>Delete</span>
+        </button>
+      }
+    </div>
+
+    @if (selectedGroup) {
+      <p class="small text-muted">
+        <span i18n>Accounts</span>:
+        {{ getAccountNames(selectedGroup.accountIds) }} ·
+        <span i18n>Drift threshold</span>:
+        {{ toPercent(selectedGroup.driftThresholdInPercentage) }}%
+      </p>
+    }
+
+    <!-- Drift -->
+    @if (drift) {
+      <div class="row mb-3">
+        <div class="col-md-4">
+          <mat-card appearance="outlined" class="mb-3">
+            <mat-card-content>
+              <gf-value
+                i18n
+                size="large"
+                [isCurrency]="true"
+                [isLoading]="isLoadingDrift"
+                [locale]="user?.settings?.locale"
+                [unit]="drift.baseCurrency"
+                [value]="drift.totalValueInBaseCurrency"
+                >Value of the group</gf-value
+              >
+            </mat-card-content>
+          </mat-card>
+        </div>
+        <div class="col-md-4">
+          <mat-card appearance="outlined" class="mb-3">
+            <mat-card-content>
+              <gf-value
+                i18n
+                size="large"
+                [isLoading]="isLoadingDrift"
+                [isPercent]="true"
+                [locale]="user?.settings?.locale"
+                [precision]="2"
+                [value]="drift.maxAbsoluteDriftInPercentage"
+                >Largest drift</gf-value
+              >
+            </mat-card-content>
+          </mat-card>
+        </div>
+        <div class="col-md-4">
+          <mat-card appearance="outlined" class="mb-3">
+            <mat-card-content class="align-items-center d-flex h-100">
+              @if (drift.needsRebalancing) {
+                <div class="align-items-center d-flex text-warning">
+                  <ion-icon class="me-2" name="warning-outline" size="large" />
+                  <span class="h5 mb-0" i18n>Rebalancing needed</span>
+                </div>
+              } @else {
+                <div class="align-items-center d-flex text-success">
+                  <ion-icon
+                    class="me-2"
+                    name="checkmark-circle-outline"
+                    size="large"
+                  />
+                  <span class="h5 mb-0" i18n>Within the threshold</span>
+                </div>
+              }
+            </mat-card-content>
+          </mat-card>
+        </div>
+      </div>
+
+      <div class="mb-5 overflow-x-auto">
+        <table class="gf-table w-100" mat-table [dataSource]="drift.positions">
+          <ng-container matColumnDef="holding">
+            <th *matHeaderCellDef class="px-1" i18n mat-header-cell>Holding</th>
+            <td *matCellDef="let element" class="px-1" mat-cell>
+              <div>{{ element.name ?? element.symbol }}</div>
+              <div class="small text-muted">
+                {{ element.symbol }}
+                @if (!element.isTargeted) {
+                  · <span i18n>no target</span>
+                }
+              </div>
+            </td>
+          </ng-container>
+          <ng-container matColumnDef="current">
+            <th *matHeaderCellDef class="px-1 text-end" i18n mat-header-cell>
+              Current
+            </th>
+            <td *matCellDef="let element" class="px-1 text-end" mat-cell>
+              {{ toPercent(element.currentInPercentage).toFixed(2) }}%
+            </td>
+          </ng-container>
+          <ng-container matColumnDef="target">
+            <th *matHeaderCellDef class="px-1 text-end" i18n mat-header-cell>
+              Target
+            </th>
+            <td *matCellDef="let element" class="px-1 text-end" mat-cell>
+              {{ toPercent(element.targetInPercentage).toFixed(2) }}%
+            </td>
+          </ng-container>
+          <ng-container matColumnDef="drift">
+            <th *matHeaderCellDef class="px-1 text-end" i18n mat-header-cell>
+              Drift
+            </th>
+            <td
+              *matCellDef="let element"
+              class="px-1 text-end text-nowrap"
+              mat-cell
+              [class.fw-bold]="element.exceedsThreshold"
+              [class.text-danger]="
+                element.exceedsThreshold && element.driftInPercentage > 0
+              "
+              [class.text-primary]="
+                element.exceedsThreshold && element.driftInPercentage < 0
+              "
+            >
+              {{ element.driftInPercentage > 0 ? '+' : ''
+              }}{{ toPercent(element.driftInPercentage).toFixed(2) }} pp
+            </td>
+          </ng-container>
+          <ng-container matColumnDef="value">
+            <th *matHeaderCellDef class="px-1 text-end" i18n mat-header-cell>
+              Value
+            </th>
+            <td *matCellDef="let element" class="px-1 text-end" mat-cell>
+              <gf-value
+                class="d-inline-block justify-content-end"
+                [isCurrency]="true"
+                [locale]="user?.settings?.locale"
+                [value]="element.valueInBaseCurrency"
+              />
+            </td>
+          </ng-container>
+          <tr *matHeaderRowDef="driftColumns" mat-header-row></tr>
+          <tr *matRowDef="let row; columns: driftColumns" mat-row></tr>
+        </table>
+        <div class="mt-2 small text-muted">
+          <span i18n>Cash</span>:
+          {{ toPercent(drift.cash.currentInPercentage).toFixed(2) }}% (<span
+            i18n
+            >target</span
+          >
+          {{ toPercent(drift.cash.targetInPercentage).toFixed(2) }}%)
+        </div>
+      </div>
+
+      <!-- Calculator -->
+      <h3 class="align-items-center d-flex h5 mb-3">
+        <ion-icon class="me-2" name="calculator-outline" />
+        <span i18n>Calculate Trades</span>
+      </h3>
+      <div class="align-items-center button-row d-flex flex-wrap mb-3">
+        <mat-form-field appearance="outline" class="without-hint">
+          <mat-label i18n>New cash to invest</mat-label>
+          <input matInput min="0" type="number" [(ngModel)]="newCash" />
+          <span matTextSuffix>{{ drift.baseCurrency }}</span>
+        </mat-form-field>
+        <mat-button-toggle-group [(ngModel)]="mode">
+          <mat-button-toggle i18n value="BUY_ONLY">Buy only</mat-button-toggle>
+          <mat-button-toggle i18n value="FULL">Buy and sell</mat-button-toggle>
+        </mat-button-toggle-group>
+        <mat-checkbox i18n [(ngModel)]="allowFractionalShares"
+          >Fractional shares</mat-checkbox
+        >
+        <button
+          color="primary"
+          mat-flat-button
+          [disabled]="isCalculating"
+          (click)="onCalculate()"
+        >
+          <span i18n>Calculate</span>
+        </button>
+      </div>
+
+      @if (plan) {
+        @for (warning of plan.warnings; track warning) {
+          <div class="mb-2 small text-warning">{{ warning }}</div>
+        }
+        @if (plan.trades.length === 0) {
+          <p class="text-muted" i18n>
+            No trade needed: the holdings are as close to the targets as the
+            available cash allows.
+          </p>
+        } @else {
+          <div class="mb-3 overflow-x-auto">
+            <table class="gf-table w-100" mat-table [dataSource]="plan.trades">
+              <ng-container matColumnDef="action">
+                <th *matHeaderCellDef class="px-1" i18n mat-header-cell>
+                  Action
+                </th>
+                <td
+                  *matCellDef="let element"
+                  class="fw-bold px-1"
+                  mat-cell
+                  [class.text-danger]="element.action === 'SELL'"
+                  [class.text-success]="element.action === 'BUY'"
+                >
+                  @if (element.action === 'BUY') {
+                    <span i18n>Buy</span>
+                  } @else {
+                    <span i18n>Sell</span>
+                  }
+                </td>
+              </ng-container>
+              <ng-container matColumnDef="holding">
+                <th *matHeaderCellDef class="px-1" i18n mat-header-cell>
+                  Holding
+                </th>
+                <td *matCellDef="let element" class="px-1" mat-cell>
+                  <div>{{ element.name ?? element.symbol }}</div>
+                  <div class="small text-muted">{{ element.symbol }}</div>
+                </td>
+              </ng-container>
+              <ng-container matColumnDef="quantity">
+                <th
+                  *matHeaderCellDef
+                  class="px-1 text-end"
+                  i18n
+                  mat-header-cell
+                >
+                  Quantity
+                </th>
+                <td *matCellDef="let element" class="px-1 text-end" mat-cell>
+                  {{ element.quantity }}
+                </td>
+              </ng-container>
+              <ng-container matColumnDef="price">
+                <th
+                  *matHeaderCellDef
+                  class="px-1 text-end"
+                  i18n
+                  mat-header-cell
+                >
+                  Price
+                </th>
+                <td *matCellDef="let element" class="px-1 text-end" mat-cell>
+                  <gf-value
+                    class="d-inline-block justify-content-end"
+                    [isCurrency]="true"
+                    [locale]="user?.settings?.locale"
+                    [value]="element.priceInBaseCurrency"
+                  />
+                </td>
+              </ng-container>
+              <ng-container matColumnDef="value">
+                <th
+                  *matHeaderCellDef
+                  class="px-1 text-end"
+                  i18n
+                  mat-header-cell
+                >
+                  Value
+                </th>
+                <td *matCellDef="let element" class="px-1 text-end" mat-cell>
+                  <gf-value
+                    class="d-inline-block justify-content-end"
+                    [isCurrency]="true"
+                    [locale]="user?.settings?.locale"
+                    [value]="element.valueInBaseCurrency"
+                  />
+                </td>
+              </ng-container>
+              <tr *matHeaderRowDef="tradeColumns" mat-header-row></tr>
+              <tr *matRowDef="let row; columns: tradeColumns" mat-row></tr>
+            </table>
+          </div>
+        }
+        <p class="small text-muted">
+          <span i18n>Cash after the trades</span>:
+          {{ plan.cashAfterInBaseCurrency.toFixed(2) }}
+          {{ plan.baseCurrency }} ·
+          <span i18n>Largest drift after the trades</span>:
+          {{ toPercent(plan.after.maxAbsoluteDriftInPercentage).toFixed(2) }}
+          pp · <span i18n>Prices in</span> {{ plan.baseCurrency }}
+        </p>
+      }
+    } @else if (isLoadingDrift) {
+      <p class="text-center text-muted" i18n>Loading...</p>
+    }
+  }
+</div>

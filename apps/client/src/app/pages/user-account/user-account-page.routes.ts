@@ -1,5 +1,6 @@
 import { GfAccessDialogHostComponent } from '@ghostfolio/client/components/user-account-access/access-dialog-host/access-dialog-host.component';
 import { GfUserAccountAccessComponent } from '@ghostfolio/client/components/user-account-access/user-account-access.component';
+import { GfUserAccountBrokeragesComponent } from '@ghostfolio/client/components/user-account-brokerages/user-account-brokerages.component';
 import { GfUserAccountMembershipComponent } from '@ghostfolio/client/components/user-account-membership/user-account-membership.component';
 import { GfUserAccountSettingsComponent } from '@ghostfolio/client/components/user-account-settings/user-account-settings.component';
 import { AuthGuard } from '@ghostfolio/client/core/auth.guard';
@@ -9,7 +10,7 @@ import { Routes } from '@angular/router';
 
 import { GfUserAccountPageComponent } from './user-account-page.component';
 
-const { access, membership } = internalRoutes.account.subRoutes;
+const { access, brokerages, membership } = internalRoutes.account.subRoutes;
 
 export const routes: Routes = [
   {
@@ -24,6 +25,11 @@ export const routes: Routes = [
         component: GfUserAccountMembershipComponent,
         path: membership.path,
         title: membership.title
+      },
+      {
+        component: GfUserAccountBrokeragesComponent,
+        path: brokerages.path,
+        title: brokerages.title
       },
       {
         children: [

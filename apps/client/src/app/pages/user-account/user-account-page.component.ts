@@ -1,5 +1,6 @@
 import { UserService } from '@ghostfolio/client/services/user/user.service';
 import { User } from '@ghostfolio/common/interfaces';
+import { hasPermission, permissions } from '@ghostfolio/common/permissions';
 import { internalRoutes } from '@ghostfolio/common/routes/routes';
 import {
   GfPageTabsComponent,
@@ -14,7 +15,12 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { addIcons } from 'ionicons';
-import { diamondOutline, keyOutline, settingsOutline } from 'ionicons/icons';
+import {
+  businessOutline,
+  diamondOutline,
+  keyOutline,
+  settingsOutline
+} from 'ionicons/icons';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -56,6 +62,16 @@ export class GfUserAccountPageComponent {
               iconName: 'key-outline',
               label: internalRoutes.account.subRoutes.access.title,
               routerLink: internalRoutes.account.subRoutes.access.routerLink
+            },
+            {
+              iconName: 'business-outline',
+              label: internalRoutes.account.subRoutes.brokerages.title,
+              routerLink:
+                internalRoutes.account.subRoutes.brokerages.routerLink,
+              showCondition: hasPermission(
+                this.user?.permissions,
+                permissions.createActivity
+              )
             }
           ];
         }
@@ -63,6 +79,6 @@ export class GfUserAccountPageComponent {
         this.changeDetectorRef.markForCheck();
       });
 
-    addIcons({ diamondOutline, keyOutline, settingsOutline });
+    addIcons({ businessOutline, diamondOutline, keyOutline, settingsOutline });
   }
 }

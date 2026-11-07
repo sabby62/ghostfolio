@@ -1,0 +1,240 @@
+<div class="container">
+  <h1 class="h3 mb-3 text-center" i18n>Brokerages</h1>
+
+  @if (isLoading && !status) {
+    <p class="text-center text-muted" i18n>Loading...</p>
+  } @else if (status && !status.isEnabled) {
+    <div class="mb-5 text-center">
+      <p i18n>
+        Connect your brokerage accounts through SnapTrade to import their
+        activities and cash balances automatically.
+      </p>
+      <p class="text-muted">
+        <span i18n
+          >To enable it, set these variables in the environment of the
+          server:</span
+        >
+        <code class="ms-1">SNAPTRADE_CLIENT_ID</code>,
+        <code>SNAPTRADE_CONSUMER_KEY</code>
+      </p>
+    </div>
+  } @else if (status) {
+    <p class="mb-4 text-center text-muted" i18n>
+      The connection with SnapTrade is read-only. The linked accounts are synced
+      every 6 hours. Deposits, withdrawals and transfers are covered by the cash
+      balance.
+    </p>
+
+    @if (hasPermissionToSync) {
+      <div
+        class="align-items-center button-row d-flex flex-wrap justify-content-center mb-4"
+      >
+        <button
+          color="primary"
+          mat-flat-button
+          [disabled]="isConnecting"
+          (click)="onConnect()"
+        >
+          <ion-icon class="me-1" name="link-outline" />
+          <span i18n>Connect Brokerage</span>
+        </button>
+        @if (status.isConnected) {
+          <button
+            mat-stroked-button
+            [disabled]="isLoading"
+            (click)="onRefresh()"
+          >
+            <ion-icon class="me-1" name="refresh-outline" />
+            <span i18n>Refresh Accounts</span>
+          </button>
+          <button
+            mat-stroked-button
+            [disabled]="isSyncing || status.accounts.length === 0"
+            (click)="onSync()"
+          >
+            <ion-icon class="me-1" name="sync-outline" />
+            @if (isSyncing) {
+              <span i18n>Syncing...</span>
+            } @else {
+              <span i18n>Sync Now</span>
+            }
+          </button>
+          <button color="warn" mat-stroked-button (click)="onDisconnect()">
+            <ion-icon class="me-1" name="unlink-outline" />
+            <span i18n>Disconnect</span>
+          </button>
+        }
+      </div>
+    }
+
+    @if (!status.isConnected) {
+      <p class="text-center text-muted" i18n>
+        No brokerage is connected yet. Click Connect Brokerage, log in to your
+        brokerage in the SnapTrade window and come back to this page.
+      </p>
+    } @else if (status.accounts.length === 0) {
+      <p class="text-center text-muted" i18n>
+        No brokerage accounts found. After you connect a brokerage, click
+        Refresh Accounts.
+      </p>
+    } @else {
+      <div class="overflow-x-auto">
+        <table class="gf-table w-100" mat-table [dataSource]="status.accounts">
+          <ng-container matColumnDef="brokerageAccount">
+            <th *matHeaderCellDef class="px-1" i18n mat-header-cell>
+              Brokerage Account
+            </th>
+            <td *matCellDef="let element" class="px-1" mat-cell>
+              <div class="fw-bold">{{ element.name }}</div>
+              <div class="text-muted">
+                {{ element.institutionName }}
+                @if (element.currency) {
+                  · {{ element.currency }}
+                }
+              </div>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="account">
+            <th *matHeaderCellDef class="px-1" i18n mat-header-cell>
+              Ghostfolio Account
+            </th>
+            <td *matCellDef="let element" class="px-1" mat-cell>
+              <mat-form-field
+                appearance="outline"
+                class="account-selector my-2 without-hint"
+              >
+                <mat-select
+                  [disabled]="!hasPermissionToSync"
+                  [value]="element.accountId ?? ''"
+                  (selectionChange)="onLinkChange(element, $event.value)"
+                >
+                  <mat-option i18n value="">Not linked</mat-option>
+                  <mat-option i18n [value]="createAccountOption"
+                    >Create new account</mat-option
+                  >
+                  @for (account of accounts; track account.id) {
+                    <mat-option [value]="account.id">{{
+                      account.name || '–'
+                    }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="syncFromDate">
+            <th *matHeaderCellDef class="px-1" i18n mat-header-cell>
+              Import From
+            </th>
+            <td *matCellDef="let element" class="px-1" mat-cell>
+              <mat-form-field
+                appearance="outline"
+                class="date-input my-2 without-hint"
+              >
+                <input
+                  matInput
+                  type="date"
+                  [disabled]="!hasPermissionToSync || !element.accountId"
+                  [value]="toDateInputValue(element.syncFromDate)"
+                  (change)="
+                    onSyncFromDateChange(element, $any($event.target).value)
+                  "
+                />
+              </mat-form-field>
+              @if (element.accountId && !element.syncFromDate) {
+                <div class="small text-muted" i18n>Full history</div>
+              }
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="isSyncEnabled">
+            <th *matHeaderCellDef class="px-1" i18n mat-header-cell>Sync</th>
+            <td *matCellDef="let element" class="px-1" mat-cell>
+              <mat-slide-toggle
+                [checked]="element.isSyncEnabled"
+                [disabled]="!hasPermissionToSync || !element.accountId"
+                (change)="onSyncEnabledChange(element, $event.checked)"
+              />
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="lastSync">
+            <th *matHeaderCellDef class="px-1" i18n mat-header-cell>
+              Last Sync
+            </th>
+            <td *matCellDef="let element" class="px-1" mat-cell>
+              @if (element.lastSyncedAt) {
+                <div class="text-nowrap">
+                  {{ element.lastSyncedAt | date: dateFormat + ' HH:mm' }}
+                </div>
+              } @else {
+                <div>–</div>
+              }
+              @if (element.lastSyncError) {
+                <div class="align-items-center d-flex small text-danger">
+                  <ion-icon class="me-1" name="alert-circle-outline" />
+                  {{ element.lastSyncError }}
+                </div>
+              }
+              @if (element.isConnectionDisabled && hasPermissionToSync) {
+                <button
+                  class="mt-1"
+                  color="warn"
+                  mat-stroked-button
+                  (click)="onConnect(element.brokerageAuthorizationId)"
+                >
+                  <span i18n>Reconnect</span>
+                </button>
+              }
+            </td>
+          </ng-container>
+
+          <tr *matHeaderRowDef="displayedColumns" mat-header-row></tr>
+          <tr *matRowDef="let row; columns: displayedColumns" mat-row></tr>
+        </table>
+      </div>
+    }
+
+    @if (syncResults) {
+      <h2 class="h5 mb-3 mt-5" i18n>Result of the Last Sync</h2>
+      @if (syncResults.length === 0) {
+        <p class="text-muted" i18n>
+          No linked account with an enabled sync. Link a brokerage account to a
+          Ghostfolio account first.
+        </p>
+      }
+      @for (result of syncResults; track result.snapTradeAccountId) {
+        <div class="mb-3 p-3 sync-result">
+          <div class="fw-bold mb-1">
+            {{ result.name }}
+            @if (result.accountId) {
+              → {{ getAccountName(result.accountId) }}
+            }
+          </div>
+          @if (result.error) {
+            <div class="text-danger">{{ result.error }}</div>
+          } @else {
+            <div>
+              <span i18n>Imported activities</span>: {{ result.imported }}
+              @if (result.balance !== undefined) {
+                · <span i18n>Cash balance</span>:
+                {{ result.balance.toFixed(2) }} {{ result.currency }}
+              }
+            </div>
+            @for (entry of getSkippedEntries(result); track entry[0]) {
+              <div class="small text-muted">
+                <span i18n>Skipped</span> ({{ entry[1] }}): {{ entry[0] }}
+              </div>
+            }
+            @for (failure of result.failed; track failure.activityId) {
+              <div class="small text-danger">
+                <span i18n>Failed</span>: {{ failure.message }}
+              </div>
+            }
+          }
+        </div>
+      }
+    }
+  }
+</div>

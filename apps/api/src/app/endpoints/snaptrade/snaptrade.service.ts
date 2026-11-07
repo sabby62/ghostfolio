@@ -30,6 +30,7 @@ import {
 
 export interface SnapTradeAccountResponse {
   accountId: string | null;
+  brokerageAuthorizationId: string | null;
   currency: string | null;
   id: string;
   institutionName: string | null;
@@ -182,6 +183,8 @@ export class SnapTradeService {
       }
 
       const data = {
+        brokerageAuthorizationId:
+          brokerageAccount.brokerage_authorization ?? null,
         currency: brokerageAccount.balance?.total?.currency ?? null,
         institutionName: brokerageAccount.institution_name ?? null,
         name: brokerageAccount.name ?? null
@@ -688,7 +691,10 @@ export class SnapTradeService {
         data:
           result.failed.length > 0
             ? {
-                lastSyncError: `${result.failed.length} activities could not be imported`
+                lastSyncError:
+                  result.failed.length === 1
+                    ? '1 activity could not be imported'
+                    : `${result.failed.length} activities could not be imported`
               }
             : { lastSyncError: null, lastSyncedAt: new Date() },
         where: { id: snapTradeAccount.id }
@@ -727,6 +733,7 @@ export class SnapTradeService {
     return {
       isConnectionDisabled,
       accountId: snapTradeAccount.accountId,
+      brokerageAuthorizationId: snapTradeAccount.brokerageAuthorizationId,
       currency: snapTradeAccount.currency,
       id: snapTradeAccount.id,
       institutionName: snapTradeAccount.institutionName,

@@ -423,9 +423,15 @@ export class DataGatheringService {
    * are returned.
    */
   public async getActiveAssetProfileIdentifiers({
-    maxAge
+    maxAge,
+    withIncompleteAssetProfiles = false
   }: {
     maxAge?: StringValue;
+    /**
+     * Includes the asset profiles without asset class regardless of their
+     * age, e.g. because the data provider failed when they were created
+     */
+    withIncompleteAssetProfiles?: boolean;
   } = {}): Promise<AssetProfileIdentifier[]> {
     return this.prismaService.symbolProfile.findMany({
       orderBy: [{ symbol: 'asc' }, { dataSource: 'asc' }],
@@ -439,9 +445,25 @@ export class DataGatheringService {
         },
         isActive: true,
         ...(maxAge && {
-          updatedAt: {
-            lt: subMilliseconds(new Date(), ms(maxAge))
-          }
+          OR: [
+            {
+              updatedAt: {
+                lt: subMilliseconds(new Date(), ms(maxAge))
+              }
+            },
+            ...(withIncompleteAssetProfiles
+              ? [
+                  {
+                    assetClass: null,
+                    // Without an override of the asset class
+                    OR: [
+                      { assetProfileOverrides: null },
+                      { assetProfileOverrides: { assetClass: null } }
+                    ]
+                  }
+                ]
+              : [])
+          ]
         })
       }
     });

@@ -15,7 +15,7 @@ describe('DataGatheringService', () => {
   };
   let prismaService: {
     marketData: { groupBy: jest.Mock; upsert: jest.Mock };
-    symbolProfile: { upsert: jest.Mock };
+    symbolProfile: { findMany: jest.Mock; upsert: jest.Mock };
   };
   let symbolProfileService: { getSymbolProfiles: jest.Mock };
 
@@ -34,6 +34,7 @@ describe('DataGatheringService', () => {
         upsert: jest.fn().mockResolvedValue({})
       },
       symbolProfile: {
+        findMany: jest.fn().mockResolvedValue([]),
         upsert: jest.fn().mockResolvedValue({})
       }
     };
@@ -55,6 +56,38 @@ describe('DataGatheringService', () => {
 
   afterEach(() => {
     jest.useRealTimers();
+  });
+
+  describe('getActiveAssetProfileIdentifiers', () => {
+    it('includes the incomplete asset profiles regardless of their age', async () => {
+      await dataGatheringService.getActiveAssetProfileIdentifiers({
+        maxAge: '60 days',
+        withIncompleteAssetProfiles: true
+      });
+
+      const { where } = prismaService.symbolProfile.findMany.mock.calls[0][0];
+
+      expect(where.OR).toEqual([
+        { updatedAt: { lt: expect.any(Date) } },
+        {
+          assetClass: null,
+          OR: [
+            { assetProfileOverrides: null },
+            { assetProfileOverrides: { assetClass: null } }
+          ]
+        }
+      ]);
+    });
+
+    it('includes only the old asset profiles by default', async () => {
+      await dataGatheringService.getActiveAssetProfileIdentifiers({
+        maxAge: '60 days'
+      });
+
+      const { where } = prismaService.symbolProfile.findMany.mock.calls[0][0];
+
+      expect(where.OR).toEqual([{ updatedAt: { lt: expect.any(Date) } }]);
+    });
   });
 
   describe('gatherAssetProfiles', () => {

@@ -63,7 +63,8 @@ export class CronService {
     if (await this.isDataGatheringEnabled()) {
       const assetProfileIdentifiers =
         await this.dataGatheringService.getActiveAssetProfileIdentifiers({
-          maxAge: '60 days'
+          maxAge: '60 days',
+          withIncompleteAssetProfiles: true
         });
 
       await this.dataGatheringService.addJobsToQueue(

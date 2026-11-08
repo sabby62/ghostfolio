@@ -87,6 +87,34 @@ Options, futures, CFDs, bonds and tokenized assets are not stored, as their
 value is not units times price. Positions counted in the cash balance
 (`cash_equivalent`) are left out to avoid counting them twice.
 
+## Align to the brokerage
+
+Ghostfolio's own pages (overview, performance, allocations, the holding
+details) keep calculating from the activities. If the history is incomplete
+(e.g. the brokerage gives only part of it), those numbers differ from the
+brokerage. **Settings → Brokerages → Align to Broker** compares the holdings
+which Ghostfolio calculates for the linked account with the positions of the
+brokerage and adds activities which close the gap:
+
+| Difference                | Activities                                                                   |
+| ------------------------- | ---------------------------------------------------------------------------- |
+| Units missing             | Buy at the price which gives the cost of the brokerage                       |
+| Too many units, same cost | Sell the extra units at the average cost of Ghostfolio                       |
+| Cost differs              | Sell all at the average cost of Ghostfolio, buy at the cost of the brokerage |
+| Not held at the brokerage | Sell all at the average cost of Ghostfolio                                   |
+
+Units are always sold at the average cost of Ghostfolio, hence an alignment
+never realizes a gain. The activities are dated after the latest activity of
+the account, one second apart, and their comment starts with
+`SnapTrade alignment`, so they can be found and deleted on the activities
+page.
+
+- _Compare_ previews the activities (`GET /api/v1/snaptrade/accounts/:id/alignment`)
+- _Align to Brokerage_ adds them (`POST /api/v1/snaptrade/accounts/:id/align`)
+- The toggle aligns after each sync, but only if every activity of the sync
+  was imported (otherwise a failed activity would be replaced by an alignment
+  and counted twice once it is imported)
+
 ## MCP tools
 
 - `get-snaptrade-accounts`: the connection and the linked accounts

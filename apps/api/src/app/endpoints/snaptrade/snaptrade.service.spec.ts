@@ -9,6 +9,7 @@ import { UserService } from '@ghostfolio/api/services/user/user.service';
 
 import { DataSource } from '@prisma/client';
 
+import { SnapTradeAlignmentService } from './snaptrade-alignment.service';
 import { SnapTradeClientService } from './snaptrade-client.service';
 import { SnapTradeNotFoundError, SnapTradeService } from './snaptrade.service';
 
@@ -34,6 +35,7 @@ describe('SnapTradeService', () => {
     currency: 'CAD',
     id: 'snaptrade-account-id',
     institutionName: 'Questrade',
+    isAutoAlignEnabled: false,
     isSyncEnabled: true,
     lastSyncError: null,
     lastSyncedAt: null,
@@ -49,6 +51,7 @@ describe('SnapTradeService', () => {
   let accountService: AccountService;
   let importService: ImportService;
   let prismaService: PrismaService;
+  let snapTradeAlignmentService: SnapTradeAlignmentService;
   let snapTradeClientService: SnapTradeClientService;
   let snapTradeService: SnapTradeService;
 
@@ -78,6 +81,7 @@ describe('SnapTradeService', () => {
       snapTradeAccount: {
         findFirst: jest.fn().mockResolvedValue(snapTradeAccount),
         findMany: jest.fn().mockResolvedValue([snapTradeAccount]),
+        findUnique: jest.fn().mockResolvedValue(snapTradeAccount),
         update: jest.fn().mockImplementation(({ data }) => {
           return { ...snapTradeAccount, ...data };
         })
@@ -179,6 +183,12 @@ describe('SnapTradeService', () => {
       isPersonalMode: jest.fn().mockReturnValue(true)
     } as unknown as SnapTradeClientService;
 
+    snapTradeAlignmentService = {
+      align: jest
+        .fn()
+        .mockResolvedValue({ activities: 2, aligned: 1, failed: [] })
+    } as unknown as SnapTradeAlignmentService;
+
     snapTradeService = new SnapTradeService(
       accountBalanceService,
       accountService,
@@ -194,6 +204,7 @@ describe('SnapTradeService', () => {
       } as unknown as ExchangeRateDataService,
       importService,
       prismaService,
+      snapTradeAlignmentService,
       snapTradeClientService,
       {
         user: jest.fn().mockResolvedValue({
@@ -303,6 +314,44 @@ describe('SnapTradeService', () => {
       expect(result.positions).toBe(1);
     });
 
+    it('aligns the holdings after the sync if enabled', async () => {
+      jest
+        .mocked(prismaService.snapTradeAccount.findMany)
+        .mockResolvedValue([{ ...snapTradeAccount, isAutoAlignEnabled: true }]);
+
+      const [result] = await snapTradeService.syncAccounts({ userId });
+
+      expect(snapTradeAlignmentService.align).toHaveBeenCalledTimes(1);
+      expect(result.alignment).toEqual({
+        activities: 2,
+        aligned: 1,
+        failed: []
+      });
+    });
+
+    it('does not align the holdings if an activity failed', async () => {
+      jest
+        .mocked(prismaService.snapTradeAccount.findMany)
+        .mockResolvedValue([{ ...snapTradeAccount, isAutoAlignEnabled: true }]);
+      jest
+        .mocked(importService.import)
+        .mockRejectedValueOnce(new Error('batch failed'))
+        .mockResolvedValueOnce([])
+        .mockRejectedValueOnce(new Error('Unknown symbol'));
+
+      const [result] = await snapTradeService.syncAccounts({ userId });
+
+      expect(result.failed).toHaveLength(1);
+      expect(result.alignmentError).toContain('Not aligned');
+      expect(snapTradeAlignmentService.align).not.toHaveBeenCalled();
+    });
+
+    it('does not align the holdings if not enabled', async () => {
+      await snapTradeService.syncAccounts({ userId });
+
+      expect(snapTradeAlignmentService.align).not.toHaveBeenCalled();
+    });
+
     it('keeps the activities if the positions cannot be fetched', async () => {
       jest.mocked(snapTradeClientService.getPositions).mockRejectedValue({
         responseBody: { detail: 'Unavailable' },
@@ -406,6 +455,7 @@ describe('SnapTradeService', () => {
           account: {
             connect: { id_userId: { userId, id: 'account-id' } }
           },
+          isAutoAlignEnabled: false,
           isSyncEnabled: true,
           syncFromDate: new Date('2026-03-16T00:00:00.000Z')
         },

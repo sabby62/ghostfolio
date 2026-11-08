@@ -18,6 +18,11 @@ export class UpdateSnapTradeAccountDto {
   @IsOptional()
   createAccount?: boolean;
 
+  /** Aligns the holdings with the positions of the brokerage after each sync */
+  @IsBoolean()
+  @IsOptional()
+  isAutoAlignEnabled?: boolean;
+
   @IsBoolean()
   @IsOptional()
   isSyncEnabled?: boolean;

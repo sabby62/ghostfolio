@@ -1,6 +1,9 @@
 import {
   SnapTradeAccount,
   SnapTradeAccountSyncResult,
+  SnapTradeAlignment,
+  SnapTradeAlignmentCorrection,
+  SnapTradeAlignmentResult,
   SnapTradeStatus
 } from '@ghostfolio/client/services/snaptrade/snaptrade.interfaces';
 import { SnapTradeService } from '@ghostfolio/client/services/snaptrade/snaptrade.service';
@@ -14,7 +17,7 @@ import { AccountWithValue } from '@ghostfolio/common/types';
 import { NotificationService } from '@ghostfolio/ui/notifications';
 import { DataService } from '@ghostfolio/ui/services';
 
-import { DatePipe } from '@angular/common';
+import { DatePipe, DecimalPipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import {
   ChangeDetectionStrategy,
@@ -35,6 +38,8 @@ import { IonIcon } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import {
   alertCircleOutline,
+  checkmarkCircleOutline,
+  gitCompareOutline,
   linkOutline,
   refreshOutline,
   syncOutline,
@@ -52,6 +57,7 @@ const CREATE_ACCOUNT = '__create__';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     DatePipe,
+    DecimalPipe,
     IonIcon,
     MatButtonModule,
     MatFormFieldModule,
@@ -67,6 +73,14 @@ const CREATE_ACCOUNT = '__create__';
 })
 export class GfUserAccountBrokeragesComponent {
   protected accounts: AccountWithValue[] = [];
+  protected alignment?: SnapTradeAlignment & { name: string | null };
+  protected readonly alignmentColumns = [
+    'holding',
+    'quantity',
+    'averagePrice',
+    'activities'
+  ];
+  protected alignmentResult?: SnapTradeAlignmentResult;
   protected readonly createAccountOption = CREATE_ACCOUNT;
   protected dateFormat: string;
   protected readonly displayedColumns = [
@@ -74,9 +88,11 @@ export class GfUserAccountBrokeragesComponent {
     'account',
     'syncFromDate',
     'isSyncEnabled',
-    'lastSync'
+    'lastSync',
+    'alignment'
   ];
   protected hasPermissionToSync = false;
+  protected isAligning = false;
   protected isConnecting = false;
   protected isLoading = true;
   protected isSyncing = false;
@@ -115,11 +131,26 @@ export class GfUserAccountBrokeragesComponent {
 
     addIcons({
       alertCircleOutline,
+      checkmarkCircleOutline,
+      gitCompareOutline,
       linkOutline,
       refreshOutline,
       syncOutline,
       unlinkOutline
     });
+  }
+
+  protected formatActivities({ activities }: SnapTradeAlignmentCorrection) {
+    return activities
+      .map(({ quantity, type, unitPrice }) => {
+        const action = type === 'BUY' ? $localize`Buy` : $localize`Sell`;
+
+        return `${action} ${this.formatNumber(quantity, 6)} @ ${this.formatNumber(
+          unitPrice,
+          4
+        )}`;
+      })
+      .join(', ');
   }
 
   protected getAccountName(accountId: string) {
@@ -132,6 +163,69 @@ export class GfUserAccountBrokeragesComponent {
 
   protected getSkippedEntries(result: SnapTradeAccountSyncResult) {
     return Object.entries(result.skipped ?? {});
+  }
+
+  protected onAlign() {
+    const alignment = this.alignment;
+
+    if (!alignment) {
+      return;
+    }
+
+    const activitiesCount = alignment.corrections.reduce(
+      (count, { activities }) => {
+        return count + activities.length;
+      },
+      0
+    );
+
+    this.notificationService.confirm({
+      confirmFn: () => {
+        this.isAligning = true;
+        this.changeDetectorRef.markForCheck();
+
+        this.snapTradeService
+          .align(alignment.snapTradeAccountId)
+          .pipe(
+            catchError((error: HttpErrorResponse) => {
+              this.showError(error);
+
+              return EMPTY;
+            }),
+            finalize(() => {
+              this.isAligning = false;
+              this.changeDetectorRef.markForCheck();
+            }),
+            takeUntilDestroyed(this.destroyRef)
+          )
+          .subscribe((alignmentResult) => {
+            this.alignmentResult = alignmentResult;
+
+            // Shows what is left to align
+            this.onPreviewAlignment(
+              this.status.accounts.find(({ id }) => {
+                return id === alignment.snapTradeAccountId;
+              }),
+              false
+            );
+          });
+      },
+      confirmType: ConfirmationDialogType.Primary,
+      message: $localize`${activitiesCount}:activitiesCount: activities are added to the account. They never realize a gain and you can delete them on the activities page (search for "SnapTrade alignment").`,
+      title: $localize`Do you want to align the holdings with the brokerage?`
+    });
+  }
+
+  protected onAutoAlignEnabledChange(
+    snapTradeAccount: SnapTradeAccount,
+    isAutoAlignEnabled: boolean
+  ) {
+    this.updateAccount(snapTradeAccount, { isAutoAlignEnabled });
+  }
+
+  protected onCloseAlignment() {
+    this.alignment = undefined;
+    this.alignmentResult = undefined;
   }
 
   protected onConnect(reconnect?: string) {
@@ -197,6 +291,40 @@ export class GfUserAccountBrokeragesComponent {
     }
   }
 
+  protected onPreviewAlignment(
+    snapTradeAccount?: SnapTradeAccount,
+    resetResult = true
+  ) {
+    if (!snapTradeAccount) {
+      return;
+    }
+
+    if (resetResult) {
+      this.alignmentResult = undefined;
+    }
+
+    this.isAligning = true;
+    this.changeDetectorRef.markForCheck();
+
+    this.snapTradeService
+      .fetchAlignment(snapTradeAccount.id)
+      .pipe(
+        catchError((error: HttpErrorResponse) => {
+          this.showError(error);
+
+          return EMPTY;
+        }),
+        finalize(() => {
+          this.isAligning = false;
+          this.changeDetectorRef.markForCheck();
+        }),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe((alignment) => {
+        this.alignment = { ...alignment, name: snapTradeAccount.name };
+      });
+  }
+
   protected onRefresh() {
     this.update({ withRefresh: true });
   }
@@ -245,6 +373,13 @@ export class GfUserAccountBrokeragesComponent {
 
   protected toDateInputValue(date: string | null) {
     return date ? date.slice(0, 10) : '';
+  }
+
+  private formatNumber(value: number, maximumFractionDigits: number) {
+    return value.toLocaleString(this.user?.settings?.locale, {
+      maximumFractionDigits,
+      minimumFractionDigits: Math.min(2, maximumFractionDigits)
+    });
   }
 
   private showError(error: HttpErrorResponse) {

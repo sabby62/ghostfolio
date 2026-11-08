@@ -28,6 +28,7 @@ import {
 } from '@nestjs/common';
 import { StatusCodes } from 'http-status-codes';
 
+import { SnapTradeAlignmentService } from './snaptrade-alignment.service';
 import { SnapTradeHoldingsService } from './snaptrade-holdings.service';
 import { SnapTradeNotFoundError, SnapTradeService } from './snaptrade.service';
 
@@ -40,6 +41,7 @@ import { SnapTradeNotFoundError, SnapTradeService } from './snaptrade.service';
 @Controller('snaptrade')
 export class SnapTradeController {
   public constructor(
+    private readonly snapTradeAlignmentService: SnapTradeAlignmentService,
     private readonly snapTradeHoldingsService: SnapTradeHoldingsService,
     private readonly snapTradeService: SnapTradeService
   ) {}
@@ -53,6 +55,27 @@ export class SnapTradeController {
   ) {
     return this.handleErrors(() => {
       return this.snapTradeService.createConnectionLink({ data, userId });
+    });
+  }
+
+  /**
+   * Adds the activities which align the holdings of the linked account with
+   * the positions of the brokerage
+   */
+  @Post('accounts/:id/align')
+  @HasPermission(permissions.createActivity)
+  @RequiresScope(scopes.activityCreate)
+  public async alignAccount(
+    @Impersonation() { userId }: ImpersonationContext,
+    @Param('id') snapTradeAccountId: string
+  ) {
+    return this.handleErrors(async () => {
+      const { snapTradeAccount, user } = await this.getSnapTradeAccount({
+        snapTradeAccountId,
+        userId
+      });
+
+      return this.snapTradeAlignmentService.align({ snapTradeAccount, user });
     });
   }
 
@@ -73,6 +96,31 @@ export class SnapTradeController {
   public async getAccounts(@Impersonation() { userId }: ImpersonationContext) {
     return this.handleErrors(() => {
       return this.snapTradeService.getAccounts({ userId });
+    });
+  }
+
+  /**
+   * Previews the activities which align the holdings of the linked account
+   * with the positions of the brokerage
+   */
+  @Get('accounts/:id/alignment')
+  @HasPermission(permissions.createActivity)
+  @RequiresScope(scopes.activityCreate)
+  @UseInterceptors(TransformDataSourceInResponseInterceptor)
+  public async getAlignment(
+    @Impersonation() { userId }: ImpersonationContext,
+    @Param('id') snapTradeAccountId: string
+  ) {
+    return this.handleErrors(async () => {
+      const { snapTradeAccount, user } = await this.getSnapTradeAccount({
+        snapTradeAccountId,
+        userId
+      });
+
+      return this.snapTradeAlignmentService.getAlignment({
+        snapTradeAccount,
+        user
+      });
     });
   }
 
@@ -133,6 +181,26 @@ export class SnapTradeController {
         userId
       });
     });
+  }
+
+  private async getSnapTradeAccount({
+    snapTradeAccountId,
+    userId
+  }: {
+    snapTradeAccountId: string;
+    userId: string;
+  }) {
+    const { snapTradeAccount, user } =
+      await this.snapTradeAlignmentService.getSnapTradeAccount({
+        snapTradeAccountId,
+        userId
+      });
+
+    if (!snapTradeAccount || !user) {
+      throw new SnapTradeNotFoundError('The SnapTrade account was not found');
+    }
+
+    return { snapTradeAccount, user };
   }
 
   private async handleErrors<T>(action: () => Promise<T>) {

@@ -14,6 +14,8 @@ import { map } from 'rxjs';
 import {
   SnapTradeAccount,
   SnapTradeAccountSyncResult,
+  SnapTradeAlignment,
+  SnapTradeAlignmentResult,
   SnapTradeHoldingsResponse,
   SnapTradeStatus
 } from './snaptrade.interfaces';
@@ -22,6 +24,17 @@ import {
 export class SnapTradeService {
   private readonly dataService = inject(DataService);
   private readonly http = inject(HttpClient);
+
+  /**
+   * Adds the activities which align the holdings of the linked account with
+   * the positions of the brokerage
+   */
+  public align(snapTradeAccountId: string) {
+    return this.http.post<SnapTradeAlignmentResult>(
+      `/api/v1/snaptrade/accounts/${snapTradeAccountId}/align`,
+      {}
+    );
+  }
 
   public createConnectionLink(data: CreateSnapTradeConnectionLinkDto = {}) {
     return this.http.post<{ redirectURI: string }>(
@@ -44,6 +57,16 @@ export class SnapTradeService {
   /**
    * Fetches the holdings as reported by the brokerages on the last sync
    */
+  /**
+   * Previews the activities which align the holdings of the linked account
+   * with the positions of the brokerage
+   */
+  public fetchAlignment(snapTradeAccountId: string) {
+    return this.http.get<SnapTradeAlignment>(
+      `/api/v1/snaptrade/accounts/${snapTradeAccountId}/alignment`
+    );
+  }
+
   public fetchHoldings({ filters }: { filters?: Filter[] } = {}) {
     // The brokerage holdings can be filtered by account and asset class only
     const params = this.dataService.buildFiltersAsQueryParams({

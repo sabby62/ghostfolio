@@ -6,6 +6,7 @@ export interface SnapTradeAccount {
   currency: string | null;
   id: string;
   institutionName: string | null;
+  isAutoAlignEnabled: boolean;
   isConnectionDisabled: boolean;
   isSyncEnabled: boolean;
   lastSyncError: string | null;
@@ -28,8 +29,34 @@ export interface SnapTradeStatus {
   mode: 'commercial' | 'personal';
 }
 
+export interface SnapTradeAlignmentCorrection {
+  activities: { quantity: number; type: 'BUY' | 'SELL'; unitPrice: number }[];
+  after: { averagePrice: number | null; quantity: number };
+  before: { averagePrice: number | null; quantity: number };
+  currency: string;
+  dataSource: string;
+  name: string | null;
+  symbol: string;
+}
+
+export interface SnapTradeAlignment {
+  accountId: string;
+  asOf: string;
+  corrections: SnapTradeAlignmentCorrection[];
+  date: string;
+  snapTradeAccountId: string;
+}
+
+export interface SnapTradeAlignmentResult {
+  activities: number;
+  aligned: number;
+  failed: { message: string; symbol: string }[];
+}
+
 export interface SnapTradeAccountSyncResult {
   accountId: string;
+  alignment?: SnapTradeAlignmentResult;
+  alignmentError?: string;
   balance?: number;
   currency?: string;
   error?: string;

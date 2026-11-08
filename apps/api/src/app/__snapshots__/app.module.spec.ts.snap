@@ -923,6 +923,21 @@ exports[`AppModule should keep the security of each route 1`] = `
       "activity:create",
     ],
   },
+  "GET /snaptrade/accounts/:id/alignment": {
+    "guards": [
+      "AuthGuard('jwt')",
+      "HasPermissionGuard",
+      "ImpersonationGuard",
+      "ScopeGuard",
+    ],
+    "interceptors": [
+      "TransformDataSourceInResponseInterceptor",
+    ],
+    "permission": "createActivity",
+    "scopes": [
+      "activity:create",
+    ],
+  },
   "GET /snaptrade/holdings": {
     "guards": [
       "AuthGuard('jwt')",
@@ -1438,6 +1453,19 @@ exports[`AppModule should keep the security of each route 1`] = `
     "scopes": [
       "portfolio:read",
       "portfolio:read:values",
+    ],
+  },
+  "POST /snaptrade/accounts/:id/align": {
+    "guards": [
+      "AuthGuard('jwt')",
+      "HasPermissionGuard",
+      "ImpersonationGuard",
+      "ScopeGuard",
+    ],
+    "interceptors": [],
+    "permission": "createActivity",
+    "scopes": [
+      "activity:create",
     ],
   },
   "POST /snaptrade/connection-link": {

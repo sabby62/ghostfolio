@@ -25,6 +25,10 @@ import {
   mapSnapTradeActivity
 } from './snaptrade-activity.mapper';
 import {
+  SnapTradeAlignmentResult,
+  SnapTradeAlignmentService
+} from './snaptrade-alignment.service';
+import {
   SnapTradeClientService,
   SnapTradeUserCredentials
 } from './snaptrade-client.service';
@@ -40,6 +44,7 @@ export interface SnapTradeAccountResponse {
   currency: string | null;
   id: string;
   institutionName: string | null;
+  isAutoAlignEnabled: boolean;
   isConnectionDisabled: boolean;
   isSyncEnabled: boolean;
   lastSyncError: string | null;
@@ -51,6 +56,9 @@ export interface SnapTradeAccountResponse {
 
 export interface SnapTradeAccountSyncResult {
   accountId: string;
+  /** The result of the alignment with the positions of the brokerage */
+  alignment?: SnapTradeAlignmentResult;
+  alignmentError?: string;
   balance?: number;
   currency?: string;
   error?: string;
@@ -87,6 +95,7 @@ export class SnapTradeService {
     private readonly exchangeRateDataService: ExchangeRateDataService,
     private readonly importService: ImportService,
     private readonly prismaService: PrismaService,
+    private readonly snapTradeAlignmentService: SnapTradeAlignmentService,
     private readonly snapTradeClientService: SnapTradeClientService,
     private readonly userService: UserService
   ) {}
@@ -404,6 +413,8 @@ export class SnapTradeService {
           account: accountId
             ? { connect: { id_userId: { userId, id: accountId } } }
             : { disconnect: true },
+          isAutoAlignEnabled:
+            data.isAutoAlignEnabled ?? snapTradeAccount.isAutoAlignEnabled,
           isSyncEnabled: data.isSyncEnabled ?? snapTradeAccount.isSyncEnabled
         },
         where: { id: snapTradeAccount.id }
@@ -752,6 +763,34 @@ export class SnapTradeService {
       }
     }
 
+    // Activities which could not be imported would be replaced by alignment
+    // activities, hence the alignment waits until every activity is imported
+    if (
+      snapTradeAccount.isAutoAlignEnabled &&
+      !result.error &&
+      !result.positionsError &&
+      result.failed.length > 0
+    ) {
+      result.alignmentError =
+        'Not aligned, as not every activity could be imported (align manually to accept the difference)';
+    } else if (
+      snapTradeAccount.isAutoAlignEnabled &&
+      !result.error &&
+      !result.positionsError
+    ) {
+      try {
+        result.alignment = await this.snapTradeAlignmentService.align({
+          user,
+          snapTradeAccount:
+            await this.prismaService.snapTradeAccount.findUnique({
+              where: { id: snapTradeAccount.id }
+            })
+        });
+      } catch (error) {
+        result.alignmentError = this.toCallerFacingError(error).message;
+      }
+    }
+
     return result;
   }
 
@@ -843,6 +882,7 @@ export class SnapTradeService {
       currency: snapTradeAccount.currency,
       id: snapTradeAccount.id,
       institutionName: snapTradeAccount.institutionName,
+      isAutoAlignEnabled: snapTradeAccount.isAutoAlignEnabled,
       isSyncEnabled: snapTradeAccount.isSyncEnabled,
       lastSyncError: snapTradeAccount.lastSyncError,
       lastSyncedAt: snapTradeAccount.lastSyncedAt,

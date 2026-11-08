@@ -190,9 +190,176 @@
             </td>
           </ng-container>
 
+          <ng-container matColumnDef="alignment">
+            <th *matHeaderCellDef class="px-1" i18n mat-header-cell>
+              Align to Broker
+            </th>
+            <td *matCellDef="let element" class="px-1" mat-cell>
+              <div class="align-items-center d-flex text-nowrap">
+                <mat-slide-toggle
+                  i18n-title
+                  title="Align the holdings after each sync"
+                  [checked]="element.isAutoAlignEnabled"
+                  [disabled]="!hasPermissionToSync || !element.accountId"
+                  (change)="onAutoAlignEnabledChange(element, $event.checked)"
+                />
+                <button
+                  class="ms-2"
+                  mat-stroked-button
+                  [disabled]="
+                    !hasPermissionToSync ||
+                    !element.accountId ||
+                    !element.positionsAsOf ||
+                    isAligning
+                  "
+                  (click)="onPreviewAlignment(element)"
+                >
+                  <ion-icon class="me-1" name="git-compare-outline" />
+                  <span i18n>Compare</span>
+                </button>
+              </div>
+              @if (element.accountId && !element.positionsAsOf) {
+                <div class="small text-muted" i18n>Sync first</div>
+              }
+            </td>
+          </ng-container>
+
           <tr *matHeaderRowDef="displayedColumns" mat-header-row></tr>
           <tr *matRowDef="let row; columns: displayedColumns" mat-row></tr>
         </table>
+      </div>
+    }
+
+    @if (alignment) {
+      <div class="alignment mt-5 p-3">
+        <div
+          class="align-items-center d-flex flex-wrap justify-content-between"
+        >
+          <h2 class="h5 mb-1">
+            <span i18n>Ghostfolio vs. Brokerage</span>: {{ alignment.name }} →
+            {{ getAccountName(alignment.accountId) }}
+          </h2>
+          <button mat-button (click)="onCloseAlignment()">
+            <span i18n>Close</span>
+          </button>
+        </div>
+        <p class="small text-muted">
+          <ng-container i18n>Positions of the brokerage as of</ng-container>
+          {{ alignment.asOf | date: dateFormat + ' HH:mm' }}.
+          <ng-container i18n
+            >Aligning adds buy and sell activities which change the quantity and
+            the cost of the holdings to the ones of the brokerage. Units are
+            sold at the average cost of Ghostfolio, hence no gain is
+            realized.</ng-container
+          >
+        </p>
+
+        @if (alignmentResult) {
+          <div class="mb-3">
+            <span i18n>Aligned holdings</span>: {{ alignmentResult.aligned }} ·
+            <span i18n>Added activities</span>:
+            {{ alignmentResult.activities }}
+            @for (failure of alignmentResult.failed; track failure.symbol) {
+              <div class="small text-danger">
+                <span i18n>Failed</span>: {{ failure.symbol }}:
+                {{ failure.message }}
+              </div>
+            }
+          </div>
+        }
+
+        @if (alignment.corrections.length === 0) {
+          <div class="align-items-center d-flex text-success">
+            <ion-icon class="me-1" name="checkmark-circle-outline" />
+            <span i18n>The holdings match the brokerage.</span>
+          </div>
+        } @else {
+          <div class="overflow-x-auto">
+            <table
+              class="gf-table w-100"
+              mat-table
+              [dataSource]="alignment.corrections"
+            >
+              <ng-container matColumnDef="holding">
+                <th *matHeaderCellDef class="px-1" i18n mat-header-cell>
+                  Holding
+                </th>
+                <td *matCellDef="let element" class="px-1" mat-cell>
+                  <div>{{ element.name ?? element.symbol }}</div>
+                  <div class="small text-muted">{{ element.symbol }}</div>
+                </td>
+              </ng-container>
+
+              <ng-container matColumnDef="quantity">
+                <th
+                  *matHeaderCellDef
+                  class="px-1 text-end"
+                  i18n
+                  mat-header-cell
+                >
+                  Quantity
+                </th>
+                <td *matCellDef="let element" class="px-1 text-end" mat-cell>
+                  <span class="text-nowrap"
+                    >{{ element.before.quantity | number: '1.0-6' }} →
+                    <strong>{{
+                      element.after.quantity | number: '1.0-6'
+                    }}</strong></span
+                  >
+                </td>
+              </ng-container>
+
+              <ng-container matColumnDef="averagePrice">
+                <th
+                  *matHeaderCellDef
+                  class="px-1 text-end"
+                  i18n
+                  mat-header-cell
+                >
+                  Cost/Share
+                </th>
+                <td *matCellDef="let element" class="px-1 text-end" mat-cell>
+                  <span class="text-nowrap"
+                    >{{
+                      element.before.averagePrice === null
+                        ? '–'
+                        : (element.before.averagePrice | number: '1.2-4')
+                    }}
+                    →
+                    <strong>{{
+                      element.after.averagePrice === null
+                        ? '–'
+                        : (element.after.averagePrice | number: '1.2-4')
+                    }}</strong>
+                    {{ element.currency }}</span
+                  >
+                </td>
+              </ng-container>
+
+              <ng-container matColumnDef="activities">
+                <th *matHeaderCellDef class="px-1" i18n mat-header-cell>
+                  Activities to Add
+                </th>
+                <td *matCellDef="let element" class="px-1" mat-cell>
+                  {{ formatActivities(element) }}
+                </td>
+              </ng-container>
+
+              <tr *matHeaderRowDef="alignmentColumns" mat-header-row></tr>
+              <tr *matRowDef="let row; columns: alignmentColumns" mat-row></tr>
+            </table>
+          </div>
+          <div class="mt-3 text-end">
+            <button
+              color="primary"
+              mat-flat-button
+              [disabled]="!hasPermissionToSync || isAligning"
+              (click)="onAlign()"
+            >
+              <span i18n>Align to Brokerage</span>
+            </button>
+          </div>
+        }
       </div>
     }
 
@@ -225,6 +392,28 @@
                 · <span i18n>Positions</span>: {{ result.positions }}
               }
             </div>
+            @if (result.alignment) {
+              <div class="small">
+                <span i18n>Aligned to the brokerage</span>:
+                {{ result.alignment.aligned }}
+                <span i18n>holdings</span>
+                @for (
+                  failure of result.alignment.failed;
+                  track failure.symbol
+                ) {
+                  <div class="text-danger">
+                    <span i18n>Failed</span>: {{ failure.symbol }}:
+                    {{ failure.message }}
+                  </div>
+                }
+              </div>
+            }
+            @if (result.alignmentError) {
+              <div class="small text-danger">
+                <span i18n>Could not align to the brokerage</span>:
+                {{ result.alignmentError }}
+              </div>
+            }
             @if (result.positionsError) {
               <div class="small text-danger">
                 <span i18n>Positions could not be synced</span>:

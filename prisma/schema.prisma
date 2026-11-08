@@ -269,6 +269,7 @@ model SnapTradeAccount {
   id                       String                      @id
   importedActivities       SnapTradeImportedActivity[]
   institutionName          String?
+  institutionUrl           String?
   /// Aligns the holdings with the positions of the brokerage after each sync
   isAutoAlignEnabled       Boolean                     @default(false)
   isSyncEnabled            Boolean                     @default(true)

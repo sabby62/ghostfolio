@@ -35,6 +35,7 @@ describe('SnapTradeService', () => {
     currency: 'CAD',
     id: 'snaptrade-account-id',
     institutionName: 'Questrade',
+    institutionUrl: null,
     isAutoAlignEnabled: false,
     isSyncEnabled: true,
     lastSyncError: null,
@@ -73,6 +74,14 @@ describe('SnapTradeService', () => {
 
     prismaService = {
       $transaction: jest.fn().mockResolvedValue([]),
+      account: {
+        findUnique: jest.fn().mockResolvedValue({ platformId: null }),
+        update: jest.fn()
+      },
+      platform: {
+        findFirst: jest.fn().mockResolvedValue(null),
+        upsert: jest.fn().mockResolvedValue({ id: 'platform-id' })
+      },
       order: {
         findFirst: jest
           .fn()
@@ -312,6 +321,31 @@ describe('SnapTradeService', () => {
       });
       expect(prismaService.$transaction).toHaveBeenCalled();
       expect(result.positions).toBe(1);
+    });
+
+    it('sets the brokerage as the platform of the account', async () => {
+      await snapTradeService.syncAccounts({ userId });
+
+      expect(prismaService.platform.upsert).toHaveBeenCalledWith({
+        create: { name: 'Questrade', url: 'https://www.questrade.com' },
+        update: {},
+        where: { url: 'https://www.questrade.com' }
+      });
+      expect(prismaService.account.update).toHaveBeenCalledWith({
+        data: { platform: { connect: { id: 'platform-id' } } },
+        where: { id_userId: { userId, id: 'account-id' } }
+      });
+    });
+
+    it('keeps the platform of an account', async () => {
+      jest
+        .mocked(prismaService.account.findUnique)
+        .mockResolvedValue({ platformId: 'other-platform-id' } as never);
+
+      await snapTradeService.syncAccounts({ userId });
+
+      expect(prismaService.platform.upsert).not.toHaveBeenCalled();
+      expect(prismaService.account.update).not.toHaveBeenCalled();
     });
 
     it('aligns the holdings after the sync if enabled', async () => {

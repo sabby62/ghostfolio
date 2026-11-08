@@ -84,6 +84,15 @@ export class SnapTradeNotFoundError extends CallerFacingError {
 // before the last sync are fetched again (the imported ones are skipped)
 const RESYNC_OVERLAP_IN_DAYS = 30;
 
+// The websites of brokerages for which SnapTrade gives no website
+const BROKERAGE_URLS: Record<string, string> = {
+  'interactive brokers': 'https://www.interactivebrokers.com',
+  moomoo: 'https://www.moomoo.com',
+  questrade: 'https://www.questrade.com',
+  'td direct investing': 'https://www.td.com',
+  wealthsimple: 'https://www.wealthsimple.com'
+};
+
 @Injectable()
 export class SnapTradeService {
   private readonly logger = new Logger(SnapTradeService.name);
@@ -168,6 +177,7 @@ export class SnapTradeService {
       ReturnType<SnapTradeClientService['listAccounts']>
     >;
     let disabledConnectionIds = new Set<string>();
+    const urlByConnectionId = new Map<string, string>();
 
     try {
       brokerageAccounts =
@@ -185,6 +195,12 @@ export class SnapTradeService {
             return id;
           })
       );
+
+      for (const { brokerage, id } of connections) {
+        if (id && brokerage?.url) {
+          urlByConnectionId.set(id, brokerage.url);
+        }
+      }
     } catch (error) {
       throw this.toCallerFacingError(error);
     }
@@ -206,6 +222,9 @@ export class SnapTradeService {
           brokerageAccount.brokerage_authorization ?? null,
         currency: brokerageAccount.balance?.total?.currency ?? null,
         institutionName: brokerageAccount.institution_name ?? null,
+        institutionUrl:
+          urlByConnectionId.get(brokerageAccount.brokerage_authorization) ??
+          null,
         name: brokerageAccount.name ?? null
       };
 
@@ -220,6 +239,8 @@ export class SnapTradeService {
           where: { id: brokerageAccount.id }
         }
       );
+
+      await this.assignPlatform({ snapTradeAccount, userId });
 
       accounts.push(
         this.toAccountResponse({
@@ -420,6 +441,11 @@ export class SnapTradeService {
         where: { id: snapTradeAccount.id }
       });
 
+    await this.assignPlatform({
+      userId,
+      snapTradeAccount: updatedSnapTradeAccount
+    });
+
     return this.toAccountResponse({
       isConnectionDisabled: false,
       snapTradeAccount: updatedSnapTradeAccount
@@ -430,6 +456,49 @@ export class SnapTradeService {
     if (!this.snapTradeClientService.isEnabled()) {
       throw new CallerFacingError(
         'SnapTrade is not configured: set SNAPTRADE_CLIENT_ID and SNAPTRADE_CONSUMER_KEY'
+      );
+    }
+  }
+  /**
+   * Sets the brokerage as the platform of the linked account, unless the
+   * account has a platform already
+   */
+  private async assignPlatform({
+    snapTradeAccount,
+    userId
+  }: {
+    snapTradeAccount: SnapTradeAccount;
+    userId: string;
+  }) {
+    if (!snapTradeAccount.accountId || !snapTradeAccount.institutionName) {
+      return;
+    }
+
+    try {
+      const account = await this.prismaService.account.findUnique({
+        select: { platformId: true },
+        where: { id_userId: { userId, id: snapTradeAccount.accountId } }
+      });
+
+      if (!account || account.platformId) {
+        return;
+      }
+
+      const platform = await this.getOrCreatePlatform({
+        name: snapTradeAccount.institutionName,
+        url: snapTradeAccount.institutionUrl
+      });
+
+      if (platform) {
+        await this.prismaService.account.update({
+          data: { platform: { connect: { id: platform.id } } },
+          where: { id_userId: { userId, id: snapTradeAccount.accountId } }
+        });
+      }
+    } catch (error) {
+      // The platform is optional, hence the sync goes on
+      this.logger.warn(
+        `Could not set the platform of the account: ${(error as Error).message}`
       );
     }
   }
@@ -505,6 +574,43 @@ export class SnapTradeService {
     });
 
     return latestActivity ? addDays(latestActivity.date, 1) : null;
+  }
+
+  private async getOrCreatePlatform({
+    name,
+    url
+  }: {
+    name: string;
+    url: string | null;
+  }) {
+    const knownUrl = Object.entries(BROKERAGE_URLS).find(([key]) => {
+      return name.toLowerCase().includes(key);
+    })?.[1];
+
+    let origin: string | undefined;
+
+    try {
+      origin = new URL(url ?? knownUrl ?? '').origin;
+    } catch {}
+
+    const existingPlatform = await this.prismaService.platform.findFirst({
+      where: {
+        OR: [
+          ...(origin ? [{ url: origin }, { url: `${origin}/` }] : []),
+          { name: { equals: name, mode: 'insensitive' } }
+        ]
+      }
+    });
+
+    if (existingPlatform || !origin) {
+      return existingPlatform;
+    }
+
+    return this.prismaService.platform.upsert({
+      create: { name, url: origin },
+      update: {},
+      where: { url: origin }
+    });
   }
 
   private async getOrCreateConnection({ userId }: { userId: string }) {
@@ -626,6 +732,8 @@ export class SnapTradeService {
       if (!account) {
         throw new Error('The linked account was not found');
       }
+
+      await this.assignPlatform({ snapTradeAccount, userId: user.id });
 
       const startDate = this.getStartDate(snapTradeAccount);
 

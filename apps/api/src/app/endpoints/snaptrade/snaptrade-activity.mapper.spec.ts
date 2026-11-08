@@ -160,7 +160,13 @@ describe('mapSnapTradeActivity', () => {
         type: 'TAX'
       })
     ).toMatchObject({
-      activity: { symbol: 'Tax', type: 'FEE', unitPrice: 25 }
+      activity: {
+        fee: 25,
+        quantity: 0,
+        symbol: 'Tax',
+        type: 'FEE',
+        unitPrice: 0
+      }
     });
   });
 
@@ -262,7 +268,13 @@ describe('mapSnapTradeActivity', () => {
         type: 'FCH'
       })
     ).toMatchObject({
-      activity: { symbol: 'Fee', type: 'FEE', unitPrice: 9.95 }
+      activity: {
+        fee: 9.95,
+        quantity: 0,
+        symbol: 'Fee',
+        type: 'FEE',
+        unitPrice: 0
+      }
     });
   });
 

@@ -247,6 +247,24 @@ export function mapSnapTradeActivity({
 
       // The data source is resolved in the import for these types, which
       // creates a custom asset profile with the symbol as its name
+      if (type === 'INTEREST') {
+        return {
+          activityId,
+          activity: {
+            accountId,
+            comment,
+            currency,
+            date,
+            fee: 0,
+            quantity: 1,
+            symbol: 'Interest',
+            type: ActivityType.INTEREST,
+            unitPrice: amount
+          }
+        };
+      }
+
+      // Ghostfolio counts the fee of a fee activity, like its activity form
       return {
         activityId,
         activity: {
@@ -254,12 +272,11 @@ export function mapSnapTradeActivity({
           comment,
           currency,
           date,
-          fee: 0,
-          quantity: 1,
-          symbol:
-            type === 'INTEREST' ? 'Interest' : type === 'TAX' ? 'Tax' : 'Fee',
-          type: type === 'INTEREST' ? ActivityType.INTEREST : ActivityType.FEE,
-          unitPrice: amount
+          fee: amount,
+          quantity: 0,
+          symbol: type === 'TAX' ? 'Tax' : 'Fee',
+          type: ActivityType.FEE,
+          unitPrice: 0
         }
       };
     }

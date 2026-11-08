@@ -1,3 +1,5 @@
+import { PortfolioPosition } from '@ghostfolio/common/interfaces';
+
 export interface SnapTradeAccount {
   accountId: string | null;
   brokerageAuthorizationId: string | null;
@@ -9,7 +11,14 @@ export interface SnapTradeAccount {
   lastSyncError: string | null;
   lastSyncedAt: string | null;
   name: string | null;
+  positionsAsOf: string | null;
   syncFromDate: string | null;
+}
+
+export interface SnapTradeHoldingsResponse {
+  /** The oldest time of the data of the brokerages, null without data */
+  asOf: Date | null;
+  holdings: PortfolioPosition[];
 }
 
 export interface SnapTradeStatus {
@@ -27,6 +36,8 @@ export interface SnapTradeAccountSyncResult {
   failed: { activityId: string; message: string }[];
   imported: number;
   name: string | null;
+  positions?: number;
+  positionsError?: string;
   skipped: Record<string, number>;
   snapTradeAccountId: string;
 }

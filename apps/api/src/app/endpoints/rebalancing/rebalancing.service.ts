@@ -1,3 +1,4 @@
+import { SnapTradeHoldingsService } from '@ghostfolio/api/app/endpoints/snaptrade/snaptrade-holdings.service';
 import { PortfolioService } from '@ghostfolio/api/app/portfolio/portfolio.service';
 import { CallerFacingError } from '@ghostfolio/api/errors/caller-facing.error';
 import {
@@ -32,6 +33,7 @@ import {
   RebalancingDrift,
   RebalancingGroupResponse,
   RebalancingHoldingInput,
+  RebalancingHoldingsSource,
   RebalancingPlan,
   RebalancingTargetInput
 } from './interfaces/rebalancing.interface';
@@ -58,6 +60,7 @@ export class RebalancingService {
     private readonly exchangeRateDataService: ExchangeRateDataService,
     private readonly portfolioService: PortfolioService,
     private readonly prismaService: PrismaService,
+    private readonly snapTradeHoldingsService: SnapTradeHoldingsService,
     private readonly userService: UserService
   ) {}
 
@@ -69,10 +72,21 @@ export class RebalancingService {
     data: CalculateRebalancingDto;
     id: string;
     userId: string;
-  }): Promise<RebalancingPlan & { baseCurrency: string; group: string }> {
+  }): Promise<
+    RebalancingPlan & {
+      baseCurrency: string;
+      group: string;
+      holdingsSource: RebalancingHoldingsSource;
+    }
+  > {
     const group = await this.getGroupWithTargets({ id, userId });
-    const { baseCurrency, cashInBaseCurrency, holdings, targets } =
-      await this.getCalculatorInput({ group, userId });
+    const {
+      baseCurrency,
+      cashInBaseCurrency,
+      holdings,
+      holdingsSource,
+      targets
+    } = await this.getCalculatorInput({ group, userId });
 
     const plan = this.runCalculator(() => {
       return RebalancingCalculator.calculatePlan({
@@ -89,6 +103,7 @@ export class RebalancingService {
     return {
       ...plan,
       baseCurrency,
+      holdingsSource,
       after: this.transformDrift(plan.after),
       before: this.transformDrift(plan.before),
       group: group.name,
@@ -141,7 +156,12 @@ export class RebalancingService {
     id: string;
     userId: string;
   }): Promise<
-    RebalancingDrift & { baseCurrency: string; group: string; id: string }
+    RebalancingDrift & {
+      baseCurrency: string;
+      group: string;
+      holdingsSource: RebalancingHoldingsSource;
+      id: string;
+    }
   > {
     const group = await this.getGroupWithTargets({ id, userId });
 
@@ -158,6 +178,7 @@ export class RebalancingService {
     const drifts: (RebalancingDrift & {
       baseCurrency: string;
       group: string;
+      holdingsSource: RebalancingHoldingsSource;
       id: string;
     })[] = [];
 
@@ -257,46 +278,128 @@ export class RebalancingService {
     const baseCurrency =
       user?.settings?.settings?.baseCurrency ?? DEFAULT_CURRENCY;
 
-    const filters =
+    const scopeAccountIds =
       group.accountIds.length > 0
-        ? this.apiService.buildFiltersFromQueryParams({
-            filterByAccounts: group.accountIds
+        ? group.accountIds
+        : (
+            await this.prismaService.account.findMany({
+              select: { id: true },
+              where: { userId }
+            })
+          ).map(({ id }) => {
+            return id;
+          });
+
+    // The holdings of the accounts which are synced from a brokerage are
+    // taken as reported by the brokerage, the ones of the other accounts are
+    // calculated by Ghostfolio
+    const brokerHoldings =
+      scopeAccountIds.length > 0
+        ? await this.snapTradeHoldingsService.getBrokerHoldings({
+            baseCurrency,
+            userId,
+            accountIds: scopeAccountIds
           })
         : undefined;
 
-    const { holdings: portfolioHoldings } =
-      await this.portfolioService.getDetails({
-        filters,
-        user,
-        userId
-      });
+    const brokerAccountIds = new Set(brokerHoldings?.accountIds ?? []);
+    const otherAccountIds = scopeAccountIds.filter((accountId) => {
+      return !brokerAccountIds.has(accountId);
+    });
 
     let cashInBaseCurrency = 0;
-    const holdings: RebalancingHoldingInput[] = [];
+    const holdingByIdentifier = new Map<string, RebalancingHoldingInput>();
 
-    for (const holding of portfolioHoldings) {
-      const { assetProfile, quantity, valueInBaseCurrency } = holding;
+    const addHolding = (holding: RebalancingHoldingInput) => {
+      const identifier = getAssetProfileIdentifier({
+        dataSource: holding.dataSource as DataSource,
+        symbol: holding.symbol
+      });
 
-      if (assetProfile.assetSubClass === AssetSubClass.CASH) {
-        cashInBaseCurrency += valueInBaseCurrency ?? 0;
-        continue;
+      const existing = holdingByIdentifier.get(identifier);
+
+      if (existing) {
+        existing.investmentInBaseCurrency =
+          (existing.investmentInBaseCurrency ?? 0) +
+          (holding.investmentInBaseCurrency ?? 0);
+        existing.quantity += holding.quantity;
+        existing.valueInBaseCurrency += holding.valueInBaseCurrency;
+      } else {
+        holdingByIdentifier.set(identifier, { ...holding });
       }
+    };
 
-      if (!quantity || quantity <= 0) {
-        continue;
+    if (brokerAccountIds.size === 0 || otherAccountIds.length > 0) {
+      const filterByAccounts =
+        brokerAccountIds.size > 0 ? otherAccountIds : group.accountIds;
+
+      const filters =
+        filterByAccounts.length > 0
+          ? this.apiService.buildFiltersFromQueryParams({ filterByAccounts })
+          : undefined;
+
+      const { holdings: portfolioHoldings } =
+        await this.portfolioService.getDetails({
+          filters,
+          user,
+          userId
+        });
+
+      for (const holding of portfolioHoldings) {
+        const { assetProfile, quantity, valueInBaseCurrency } = holding;
+
+        if (assetProfile.assetSubClass === AssetSubClass.CASH) {
+          cashInBaseCurrency += valueInBaseCurrency ?? 0;
+          continue;
+        }
+
+        if (!quantity || quantity <= 0) {
+          continue;
+        }
+
+        addHolding({
+          quantity,
+          currency: assetProfile.currency,
+          investmentInBaseCurrency:
+            holding.investmentWithCurrencyEffect ?? holding.investment,
+          dataSource: assetProfile.dataSource,
+          name: assetProfile.name,
+          symbol: assetProfile.symbol,
+          valueInBaseCurrency: valueInBaseCurrency ?? 0
+        });
       }
+    }
 
-      holdings.push({
-        quantity,
-        currency: assetProfile.currency,
+    for (const { valueInBaseCurrency } of brokerHoldings?.cash ?? []) {
+      cashInBaseCurrency += valueInBaseCurrency;
+    }
+
+    for (const position of brokerHoldings?.positions ?? []) {
+      addHolding({
+        currency: position.currency,
+        dataSource: position.dataSource,
+        // Without the cost, the holding has no gain
         investmentInBaseCurrency:
-          holding.investmentWithCurrencyEffect ?? holding.investment,
-        dataSource: assetProfile.dataSource,
-        name: assetProfile.name,
-        symbol: assetProfile.symbol,
-        valueInBaseCurrency: valueInBaseCurrency ?? 0
+          position.investmentInBaseCurrency ?? position.valueInBaseCurrency,
+        name: position.name ?? undefined,
+        quantity: position.quantity,
+        symbol: position.symbol,
+        valueInBaseCurrency: position.valueInBaseCurrency
       });
     }
+
+    const holdings = [...holdingByIdentifier.values()];
+
+    const holdingsSource: RebalancingHoldingsSource = {
+      asOf: brokerHoldings?.asOf ?? null,
+      brokerAccountIds: [...brokerAccountIds],
+      source:
+        brokerAccountIds.size === 0
+          ? 'GHOSTFOLIO'
+          : otherAccountIds.length > 0
+            ? 'MIXED'
+            : 'BROKER'
+    };
 
     const heldIdentifiers = new Set(
       holdings.map(({ dataSource, symbol }) => {
@@ -346,7 +449,13 @@ export class RebalancingService {
       }
     );
 
-    return { baseCurrency, cashInBaseCurrency, holdings, targets };
+    return {
+      baseCurrency,
+      cashInBaseCurrency,
+      holdings,
+      holdingsSource,
+      targets
+    };
   }
 
   private async getDriftOfGroup({
@@ -356,8 +465,13 @@ export class RebalancingService {
     group: RebalancingGroupWithTargets;
     userId: string;
   }) {
-    const { baseCurrency, cashInBaseCurrency, holdings, targets } =
-      await this.getCalculatorInput({ group, userId });
+    const {
+      baseCurrency,
+      cashInBaseCurrency,
+      holdings,
+      holdingsSource,
+      targets
+    } = await this.getCalculatorInput({ group, userId });
 
     const drift = this.runCalculator(() => {
       return RebalancingCalculator.calculateDrift({
@@ -371,6 +485,7 @@ export class RebalancingService {
     return {
       ...this.transformDrift(drift),
       baseCurrency,
+      holdingsSource,
       group: group.name,
       id: group.id
     };

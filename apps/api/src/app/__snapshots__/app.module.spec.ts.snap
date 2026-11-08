@@ -923,6 +923,21 @@ exports[`AppModule should keep the security of each route 1`] = `
       "activity:create",
     ],
   },
+  "GET /snaptrade/holdings": {
+    "guards": [
+      "AuthGuard('jwt')",
+      "HasPermissionGuard",
+      "ImpersonationGuard",
+      "ScopeGuard",
+    ],
+    "interceptors": [
+      "TransformDataSourceInResponseInterceptor",
+      "RedactValuesInResponseInterceptor",
+    ],
+    "scopes": [
+      "portfolio:read",
+    ],
+  },
   "GET /snaptrade/status": {
     "guards": [
       "AuthGuard('jwt')",

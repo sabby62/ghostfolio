@@ -1,3 +1,4 @@
+import { SnapTradeHoldingsService } from '@ghostfolio/api/app/endpoints/snaptrade/snaptrade-holdings.service';
 import { PortfolioModule } from '@ghostfolio/api/app/portfolio/portfolio.module';
 import { ApiModule } from '@ghostfolio/api/services/api/api.module';
 import { ConfigurationModule } from '@ghostfolio/api/services/configuration/configuration.module';
@@ -25,6 +26,6 @@ import { RebalancingService } from './rebalancing.service';
     PrismaModule,
     UserModule
   ],
-  providers: [RebalancingService]
+  providers: [RebalancingService, SnapTradeHoldingsService]
 })
 export class RebalancingModule {}

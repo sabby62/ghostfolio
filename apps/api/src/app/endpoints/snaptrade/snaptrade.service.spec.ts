@@ -28,6 +28,7 @@ describe('SnapTradeService', () => {
     accountId: 'account-id',
     accountUserId: userId,
     brokerageAuthorizationId: 'brokerage-authorization-id',
+    cashBalances: null,
     connectionId: 'connection-id',
     createdAt: new Date(),
     currency: 'CAD',
@@ -37,6 +38,7 @@ describe('SnapTradeService', () => {
     lastSyncError: null,
     lastSyncedAt: null,
     name: 'TFSA',
+    positionsAsOf: null,
     syncFromDate: new Date('2026-02-01T00:00:00.000Z'),
     updatedAt: new Date()
   };
@@ -67,6 +69,7 @@ describe('SnapTradeService', () => {
     } as unknown as ImportService;
 
     prismaService = {
+      $transaction: jest.fn().mockResolvedValue([]),
       order: {
         findFirst: jest
           .fn()
@@ -87,6 +90,10 @@ describe('SnapTradeService', () => {
       snapTradeImportedActivity: {
         createMany: jest.fn(),
         findMany: jest.fn().mockResolvedValue([{ activityId: 'imported' }])
+      },
+      snapTradePosition: {
+        createMany: jest.fn(),
+        deleteMany: jest.fn()
       }
     } as unknown as PrismaService;
 
@@ -143,6 +150,31 @@ describe('SnapTradeService', () => {
         { cash: 100, currency: { code: 'CAD' } },
         { cash: 50, currency: { code: 'USD' } }
       ]),
+      getPositions: jest.fn().mockResolvedValue({
+        asOf: new Date('2026-11-08T00:22:44Z'),
+        positions: [
+          {
+            cost_basis: '40',
+            currency: 'CAD',
+            instrument: { kind: 'etf', raw_symbol: 'XEQT', symbol: 'XEQT.TO' },
+            price: '44',
+            units: '10'
+          },
+          {
+            cost_basis: '46',
+            currency: 'CAD',
+            instrument: { kind: 'etf', raw_symbol: 'XEQT', symbol: 'XEQT.TO' },
+            price: '44',
+            units: '30'
+          },
+          {
+            currency: 'USD',
+            instrument: { kind: 'option', symbol: 'NVDA 261218C00200000' },
+            price: '1.5',
+            units: '1'
+          }
+        ]
+      }),
       isEnabled: jest.fn().mockReturnValue(true),
       isPersonalMode: jest.fn().mockReturnValue(true)
     } as unknown as SnapTradeClientService;
@@ -227,6 +259,64 @@ describe('SnapTradeService', () => {
         data: { lastSyncError: null, lastSyncedAt: expect.any(Date) },
         where: { id: 'snaptrade-account-id' }
       });
+    });
+
+    it('stores the cash balances and the positions as reported by the brokerage', async () => {
+      const [result] = await snapTradeService.syncAccounts({ userId });
+
+      expect(prismaService.snapTradeAccount.update).toHaveBeenCalledWith({
+        data: {
+          cashBalances: [
+            { amount: 100, currency: 'CAD' },
+            { amount: 50, currency: 'USD' }
+          ]
+        },
+        where: { id: 'snaptrade-account-id' }
+      });
+
+      expect(prismaService.snapTradePosition.deleteMany).toHaveBeenCalledWith({
+        where: { snapTradeAccountId: 'snaptrade-account-id' }
+      });
+
+      // The two lots of XEQT.TO in one position, without the option
+      expect(prismaService.snapTradePosition.createMany).toHaveBeenCalledWith({
+        data: [
+          {
+            averagePrice: 44.5,
+            currency: 'CAD',
+            dataSource: DataSource.YAHOO,
+            kind: 'etf',
+            name: null,
+            price: 44,
+            quantity: 40,
+            snapTradeAccountId: 'snaptrade-account-id',
+            symbol: 'XEQT.TO'
+          }
+        ]
+      });
+
+      expect(prismaService.snapTradeAccount.update).toHaveBeenCalledWith({
+        data: { positionsAsOf: new Date('2026-11-08T00:22:44Z') },
+        where: { id: 'snaptrade-account-id' }
+      });
+      expect(prismaService.$transaction).toHaveBeenCalled();
+      expect(result.positions).toBe(1);
+    });
+
+    it('keeps the activities if the positions cannot be fetched', async () => {
+      jest.mocked(snapTradeClientService.getPositions).mockRejectedValue({
+        responseBody: { detail: 'Unavailable' },
+        status: 503
+      });
+
+      const [result] = await snapTradeService.syncAccounts({ userId });
+
+      expect(result.imported).toBe(2);
+      expect(result.error).toBeUndefined();
+      expect(result.positionsError).toBe(
+        'SnapTrade answered with status 503: Unavailable'
+      );
+      expect(prismaService.snapTradePosition.createMany).not.toHaveBeenCalled();
     });
 
     it('imports one by one after a failed batch and reports the failures', async () => {

@@ -1,3 +1,7 @@
+import {
+  BrokerHoldings,
+  SnapTradeHoldingsService
+} from '@ghostfolio/api/app/endpoints/snaptrade/snaptrade-holdings.service';
 import { PortfolioService } from '@ghostfolio/api/app/portfolio/portfolio.service';
 import { CallerFacingError } from '@ghostfolio/api/errors/caller-facing.error';
 import { ApiService } from '@ghostfolio/api/services/api/api.service';
@@ -49,6 +53,14 @@ describe('RebalancingService', () => {
   let portfolioService: PortfolioService;
   let prismaService: PrismaService;
   let rebalancingService: RebalancingService;
+  let snapTradeHoldingsService: SnapTradeHoldingsService;
+
+  const noBrokerHoldings: BrokerHoldings = {
+    accountIds: [],
+    asOf: null,
+    cash: [],
+    positions: []
+  };
 
   beforeEach(() => {
     apiService = {
@@ -110,6 +122,10 @@ describe('RebalancingService', () => {
       rebalancingTarget: { deleteMany: jest.fn() }
     } as unknown as PrismaService;
 
+    snapTradeHoldingsService = {
+      getBrokerHoldings: jest.fn().mockResolvedValue(noBrokerHoldings)
+    } as unknown as SnapTradeHoldingsService;
+
     rebalancingService = new RebalancingService(
       apiService,
       {
@@ -119,6 +135,7 @@ describe('RebalancingService', () => {
       exchangeRateDataService,
       portfolioService,
       prismaService,
+      snapTradeHoldingsService,
       {
         user: jest.fn().mockResolvedValue({
           id: userId,
@@ -142,6 +159,94 @@ describe('RebalancingService', () => {
     expect(drift.totalValueInBaseCurrency).toBe(5000);
     expect(drift.cash.valueInBaseCurrency).toBe(1500);
     expect(drift.positions).toHaveLength(2);
+    expect(drift.holdingsSource).toEqual({
+      asOf: null,
+      brokerAccountIds: [],
+      source: 'GHOSTFOLIO'
+    });
+  });
+
+  it('takes the holdings of a synced account as reported by the brokerage', async () => {
+    const asOf = new Date('2026-11-08T00:22:44Z');
+
+    jest.mocked(snapTradeHoldingsService.getBrokerHoldings).mockResolvedValue({
+      asOf,
+      accountIds: ['account-id'],
+      cash: [{ amount: 1000, currency: 'CAD', valueInBaseCurrency: 1000 }],
+      positions: [
+        {
+          averagePrice: 30,
+          currency: 'CAD',
+          dataSource: DataSource.YAHOO,
+          investmentInBaseCurrency: 1500,
+          marketPrice: 40,
+          name: 'iShares Core Equity ETF Portfolio',
+          quantity: 50,
+          symbol: 'XEQT.TO',
+          valueInBaseCurrency: 2000
+        }
+      ]
+    });
+
+    const drift = await rebalancingService.getDrift({ userId, id: 'group-id' });
+
+    expect(snapTradeHoldingsService.getBrokerHoldings).toHaveBeenCalledWith({
+      userId,
+      accountIds: ['account-id'],
+      baseCurrency: 'CAD'
+    });
+    expect(portfolioService.getDetails).not.toHaveBeenCalled();
+    expect(drift.holdingsSource).toEqual({
+      asOf,
+      brokerAccountIds: ['account-id'],
+      source: 'BROKER'
+    });
+    expect(drift.totalValueInBaseCurrency).toBe(3000);
+    expect(drift.cash.valueInBaseCurrency).toBe(1000);
+    expect(drift.positions).toContainEqual(
+      expect.objectContaining({
+        gainInBaseCurrency: 500,
+        quantity: 50,
+        symbol: 'XEQT.TO'
+      })
+    );
+  });
+
+  it('combines the brokerage with the other accounts of a group', async () => {
+    jest.spyOn(prismaService.rebalancingGroup, 'findFirst').mockResolvedValue({
+      ...group,
+      accountIds: ['account-id', 'other-account-id']
+    });
+
+    jest.mocked(snapTradeHoldingsService.getBrokerHoldings).mockResolvedValue({
+      ...noBrokerHoldings,
+      accountIds: ['account-id'],
+      positions: [
+        {
+          averagePrice: null,
+          currency: 'CAD',
+          dataSource: DataSource.YAHOO,
+          investmentInBaseCurrency: null,
+          marketPrice: 35,
+          name: null,
+          quantity: 100,
+          symbol: 'XEQT.TO',
+          valueInBaseCurrency: 3500
+        }
+      ]
+    });
+
+    const drift = await rebalancingService.getDrift({ userId, id: 'group-id' });
+
+    expect(apiService.buildFiltersFromQueryParams).toHaveBeenCalledWith({
+      filterByAccounts: ['other-account-id']
+    });
+    expect(drift.holdingsSource.source).toBe('MIXED');
+    // XEQT.TO of both sources (3500 + 3500) and the cash (1500)
+    expect(drift.totalValueInBaseCurrency).toBe(8500);
+    expect(drift.positions).toContainEqual(
+      expect.objectContaining({ quantity: 200, symbol: 'XEQT.TO' })
+    );
   });
 
   it('calculates the trades with the price of the quote in base currency', async () => {

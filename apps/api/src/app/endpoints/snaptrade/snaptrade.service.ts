@@ -15,7 +15,7 @@ import {
 import { UserWithSettings } from '@ghostfolio/common/types';
 
 import { Injectable, Logger } from '@nestjs/common';
-import { SnapTradeAccount, SnapTradeConnection } from '@prisma/client';
+import { Prisma, SnapTradeAccount, SnapTradeConnection } from '@prisma/client';
 import { addDays, format, subDays } from 'date-fns';
 import { randomUUID } from 'node:crypto';
 
@@ -28,6 +28,11 @@ import {
   SnapTradeClientService,
   SnapTradeUserCredentials
 } from './snaptrade-client.service';
+import { SnapTradeCashBalance } from './snaptrade-holdings.service';
+import {
+  SnapTradePositionData,
+  mapSnapTradePosition
+} from './snaptrade-position.mapper';
 
 export interface SnapTradeAccountResponse {
   accountId: string | null;
@@ -40,6 +45,7 @@ export interface SnapTradeAccountResponse {
   lastSyncError: string | null;
   lastSyncedAt: Date | null;
   name: string | null;
+  positionsAsOf: Date | null;
   syncFromDate: Date | null;
 }
 
@@ -51,6 +57,9 @@ export interface SnapTradeAccountSyncResult {
   failed: { activityId: string; message: string }[];
   imported: number;
   name: string | null;
+  /** Number of positions which are stored as reported by the brokerage */
+  positions?: number;
+  positionsError?: string;
   skipped: Record<string, number>;
   snapTradeAccountId: string;
 }
@@ -414,7 +423,7 @@ export class SnapTradeService {
     }
   }
 
-  private async getBalanceInCurrency({
+  private async getCashBalances({
     credentials,
     currency,
     snapTradeAccountId
@@ -428,21 +437,32 @@ export class SnapTradeService {
       accountId: snapTradeAccountId
     });
 
-    let balance = 0;
+    const amountByCurrency = new Map<string, number>();
 
     for (const { cash, currency: balanceCurrency } of balances) {
       if (!cash) {
         continue;
       }
 
-      balance += this.exchangeRateDataService.toCurrency(
-        cash,
-        balanceCurrency?.code ?? currency,
+      const code = balanceCurrency?.code ?? currency;
+
+      amountByCurrency.set(code, (amountByCurrency.get(code) ?? 0) + cash);
+    }
+
+    const cashBalances: SnapTradeCashBalance[] = [];
+    let totalInCurrency = 0;
+
+    for (const [code, amount] of amountByCurrency) {
+      cashBalances.push({ amount, currency: code });
+
+      totalInCurrency += this.exchangeRateDataService.toCurrency(
+        amount,
+        code,
         currency
       );
     }
 
-    return balance;
+    return { cashBalances, totalInCurrency };
   }
 
   private getConnection({ userId }: { userId: string }) {
@@ -674,10 +694,20 @@ export class SnapTradeService {
       }
 
       result.currency = account.currency ?? DEFAULT_CURRENCY;
-      result.balance = await this.getBalanceInCurrency({
+
+      const { cashBalances, totalInCurrency } = await this.getCashBalances({
         credentials,
         currency: result.currency,
         snapTradeAccountId: snapTradeAccount.id
+      });
+
+      result.balance = totalInCurrency;
+
+      await this.prismaService.snapTradeAccount.update({
+        data: {
+          cashBalances: cashBalances as unknown as Prisma.InputJsonValue
+        },
+        where: { id: snapTradeAccount.id }
       });
 
       await this.accountBalanceService.createOrUpdateAccountBalance({
@@ -711,7 +741,80 @@ export class SnapTradeService {
       });
     }
 
+    if (!result.error) {
+      try {
+        result.positions = await this.syncPositions({
+          credentials,
+          snapTradeAccountId: snapTradeAccount.id
+        });
+      } catch (error) {
+        result.positionsError = this.toCallerFacingError(error).message;
+      }
+    }
+
     return result;
+  }
+
+  /**
+   * Replaces the stored positions of the account with the ones which the
+   * brokerage reports
+   */
+  private async syncPositions({
+    credentials,
+    snapTradeAccountId
+  }: {
+    credentials: SnapTradeUserCredentials;
+    snapTradeAccountId: string;
+  }) {
+    const { asOf, positions } = await this.snapTradeClientService.getPositions({
+      credentials,
+      accountId: snapTradeAccountId
+    });
+
+    const dataSource = this.dataProviderService.getDataSourceForImport();
+    const positionsBySymbol = new Map<string, SnapTradePositionData>();
+
+    for (const position of positions) {
+      const mapped = mapSnapTradePosition({ dataSource, position });
+
+      if ('reason' in mapped) {
+        continue;
+      }
+
+      const existing = positionsBySymbol.get(mapped.symbol);
+
+      if (existing) {
+        // Several lots of the same security
+        const quantity = existing.quantity + mapped.quantity;
+
+        existing.averagePrice =
+          existing.averagePrice !== null && mapped.averagePrice !== null
+            ? (existing.averagePrice * existing.quantity +
+                mapped.averagePrice * mapped.quantity) /
+              quantity
+            : null;
+        existing.quantity = quantity;
+      } else {
+        positionsBySymbol.set(mapped.symbol, mapped);
+      }
+    }
+
+    await this.prismaService.$transaction([
+      this.prismaService.snapTradePosition.deleteMany({
+        where: { snapTradeAccountId }
+      }),
+      this.prismaService.snapTradePosition.createMany({
+        data: [...positionsBySymbol.values()].map((position) => {
+          return { ...position, snapTradeAccountId };
+        })
+      }),
+      this.prismaService.snapTradeAccount.update({
+        data: { positionsAsOf: asOf ?? new Date() },
+        where: { id: snapTradeAccountId }
+      })
+    ]);
+
+    return positionsBySymbol.size;
   }
 
   private getStartDate({ lastSyncedAt, syncFromDate }: SnapTradeAccount) {
@@ -744,6 +847,7 @@ export class SnapTradeService {
       lastSyncError: snapTradeAccount.lastSyncError,
       lastSyncedAt: snapTradeAccount.lastSyncedAt,
       name: snapTradeAccount.name,
+      positionsAsOf: snapTradeAccount.positionsAsOf,
       syncFromDate: snapTradeAccount.syncFromDate
     };
   }

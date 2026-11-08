@@ -1,7 +1,10 @@
 import { HasPermission } from '@ghostfolio/api/decorators/has-permission.decorator';
 import { Impersonation } from '@ghostfolio/api/decorators/impersonation.decorator';
 import { RequiresScope } from '@ghostfolio/api/decorators/requires-scope.decorator';
+import { FilterDto } from '@ghostfolio/api/dtos/filter.dto';
 import { CallerFacingError } from '@ghostfolio/api/errors/caller-facing.error';
+import { RedactValuesInResponseInterceptor } from '@ghostfolio/api/interceptors/redact-values-in-response/redact-values-in-response.interceptor';
+import { TransformDataSourceInResponseInterceptor } from '@ghostfolio/api/interceptors/transform-data-source-in-response/transform-data-source-in-response.interceptor';
 import {
   CreateSnapTradeConnectionLinkDto,
   SyncSnapTradeAccountsDto,
@@ -19,20 +22,27 @@ import {
   HttpException,
   Param,
   Post,
-  Put
+  Put,
+  Query,
+  UseInterceptors
 } from '@nestjs/common';
 import { StatusCodes } from 'http-status-codes';
 
+import { SnapTradeHoldingsService } from './snaptrade-holdings.service';
 import { SnapTradeNotFoundError, SnapTradeService } from './snaptrade.service';
 
 /**
- * Syncs the activities and the cash balances of brokerage accounts which are
- * connected through SnapTrade. Everything which reaches SnapTrade or imports
- * activities requires the permission and the scope to create activities.
+ * Syncs the activities, the cash balances and the positions of brokerage
+ * accounts which are connected through SnapTrade. Everything which reaches
+ * SnapTrade or imports activities requires the permission and the scope to
+ * create activities. The synced holdings only require reading the portfolio.
  */
 @Controller('snaptrade')
 export class SnapTradeController {
-  public constructor(private readonly snapTradeService: SnapTradeService) {}
+  public constructor(
+    private readonly snapTradeHoldingsService: SnapTradeHoldingsService,
+    private readonly snapTradeService: SnapTradeService
+  ) {}
 
   @Post('connection-link')
   @HasPermission(permissions.createActivity)
@@ -63,6 +73,24 @@ export class SnapTradeController {
   public async getAccounts(@Impersonation() { userId }: ImpersonationContext) {
     return this.handleErrors(() => {
       return this.snapTradeService.getAccounts({ userId });
+    });
+  }
+
+  /**
+   * The holdings as reported by the brokerages on the last sync
+   */
+  @Get('holdings')
+  @RequiresScope(scopes.portfolioRead)
+  @UseInterceptors(RedactValuesInResponseInterceptor)
+  @UseInterceptors(TransformDataSourceInResponseInterceptor)
+  public async getHoldings(
+    @Impersonation() { userId }: ImpersonationContext,
+    @Query() { accounts, assetClasses }: FilterDto
+  ) {
+    return this.snapTradeHoldingsService.getHoldings({
+      assetClasses,
+      userId,
+      accountIds: accounts
     });
   }
 

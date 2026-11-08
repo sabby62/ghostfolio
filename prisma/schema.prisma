@@ -260,6 +260,8 @@ model SnapTradeAccount {
   accountId                String?
   accountUserId            String?
   brokerageAuthorizationId String?
+  /// The cash balances of the brokerage account as [{ currency, amount }]
+  cashBalances             Json?
   connection               SnapTradeConnection         @relation(fields: [connectionId], onDelete: Cascade, references: [id])
   connectionId             String
   createdAt                DateTime                    @default(now())
@@ -271,6 +273,8 @@ model SnapTradeAccount {
   lastSyncError            String?
   lastSyncedAt             DateTime?
   name                     String?
+  positions                SnapTradePosition[]
+  positionsAsOf            DateTime?
   syncFromDate             DateTime?
   updatedAt                DateTime                    @updatedAt
 
@@ -296,6 +300,24 @@ model SnapTradeImportedActivity {
   snapTradeAccountId String
 
   @@id([snapTradeAccountId, activityId])
+}
+
+/// A position of a brokerage account as reported by SnapTrade on the last sync
+model SnapTradePosition {
+  /// Average cost per unit in the currency of the position
+  averagePrice       Float?
+  currency           String
+  dataSource         DataSource
+  kind               String?
+  name               String?
+  /// Market price per unit in the currency of the position
+  price              Float
+  quantity           Float
+  snapTradeAccount   SnapTradeAccount @relation(fields: [snapTradeAccountId], onDelete: Cascade, references: [id])
+  snapTradeAccountId String
+  symbol             String
+
+  @@id([snapTradeAccountId, dataSource, symbol])
 }
 
 model SymbolProfile {

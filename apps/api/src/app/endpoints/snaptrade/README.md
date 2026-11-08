@@ -68,6 +68,25 @@ stay).
 - The cash balance of the account is set to the cash of the brokerage account,
   converted to the currency of the account.
 
+## Holdings as reported by the brokerage
+
+Every sync also stores the positions (quantity, price and average cost per
+share) and the cash balances per currency as the brokerage reports them.
+Ghostfolio keeps calculating its own holdings from the activities for the
+charts, the performance and the dividends, while these numbers match the
+brokerage exactly:
+
+- `GET /api/v1/snaptrade/holdings` returns them in the format of the holdings
+  of Ghostfolio (filters: `accounts`, `assetClasses`)
+- **Overview → Holdings** has a _Broker_ / _Ghostfolio_ toggle (default
+  _Broker_ once a sync stored positions)
+- **Portfolio → Rebalancing** takes the holdings of synced accounts from the
+  brokerage and the ones of other accounts from Ghostfolio, and says which
+
+Options, futures, CFDs, bonds and tokenized assets are not stored, as their
+value is not units times price. Positions counted in the cash balance
+(`cash_equivalent`) are left out to avoid counting them twice.
+
 ## MCP tools
 
 - `get-snaptrade-accounts`: the connection and the linked accounts

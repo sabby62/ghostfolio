@@ -11,13 +11,14 @@ import { UserModule } from '@ghostfolio/api/services/user/user.module';
 import { Module } from '@nestjs/common';
 
 import { SnapTradeClientService } from './snaptrade-client.service';
+import { SnapTradeHoldingsService } from './snaptrade-holdings.service';
 import { SnapTradeSyncScheduler } from './snaptrade-sync.scheduler';
 import { SnapTradeController } from './snaptrade.controller';
 import { SnapTradeService } from './snaptrade.service';
 
 @Module({
   controllers: [SnapTradeController],
-  exports: [SnapTradeService],
+  exports: [SnapTradeHoldingsService, SnapTradeService],
   imports: [
     AccountBalanceModule,
     AccountModule,
@@ -29,6 +30,11 @@ import { SnapTradeService } from './snaptrade.service';
     PrismaModule,
     UserModule
   ],
-  providers: [SnapTradeClientService, SnapTradeService, SnapTradeSyncScheduler]
+  providers: [
+    SnapTradeClientService,
+    SnapTradeHoldingsService,
+    SnapTradeService,
+    SnapTradeSyncScheduler
+  ]
 })
 export class SnapTradeModule {}

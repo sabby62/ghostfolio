@@ -4,11 +4,19 @@ import { SnapTradeClientService } from './snaptrade-client.service';
 
 describe('SnapTradeClientService', () => {
   let getAccountActivities: jest.Mock;
+  let getAllAccountPositions: jest.Mock;
   let snapTradeClientService: SnapTradeClientService;
 
   beforeEach(() => {
     getAccountActivities = jest.fn().mockResolvedValue({
       data: { data: [{ id: 'activity-1' }], pagination: { total: 1 } }
+    });
+
+    getAllAccountPositions = jest.fn().mockResolvedValue({
+      data: {
+        data_freshness: { as_of: '2026-11-08T00:22:44Z' },
+        results: [{ instrument: { symbol: 'XEQT.TO' }, units: '49' }]
+      }
     });
 
     snapTradeClientService = new SnapTradeClientService({
@@ -23,7 +31,7 @@ describe('SnapTradeClientService', () => {
 
     // Replaces the SDK client
     (snapTradeClientService as unknown as { client: unknown }).client = {
-      accountInformation: { getAccountActivities }
+      accountInformation: { getAccountActivities, getAllAccountPositions }
     };
   });
 
@@ -52,5 +60,34 @@ describe('SnapTradeClientService', () => {
       expect.objectContaining({ startDate: undefined })
     );
     expect(activities).toEqual([{ id: 'activity-1' }]);
+  });
+
+  it('returns the positions and the time of their data', async () => {
+    const { asOf, positions } = await snapTradeClientService.getPositions({
+      accountId: 'account-id',
+      credentials: {}
+    });
+
+    expect(getAllAccountPositions).toHaveBeenCalledWith({
+      accountId: 'account-id'
+    });
+    expect(asOf).toEqual(new Date('2026-11-08T00:22:44Z'));
+    expect(positions).toEqual([
+      { instrument: { symbol: 'XEQT.TO' }, units: '49' }
+    ]);
+  });
+
+  it('accepts the positions under the key "positions"', async () => {
+    getAllAccountPositions.mockResolvedValue({
+      data: { positions: [{ instrument: { symbol: 'NVDA' } }] }
+    });
+
+    const { asOf, positions } = await snapTradeClientService.getPositions({
+      accountId: 'account-id',
+      credentials: {}
+    });
+
+    expect(asOf).toBeUndefined();
+    expect(positions).toEqual([{ instrument: { symbol: 'NVDA' } }]);
   });
 });

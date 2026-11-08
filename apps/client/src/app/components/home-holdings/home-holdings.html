@@ -14,7 +14,16 @@
           [options]="holdingsViewModeOptions"
           (valueChange)="onChangeHoldingsViewMode($event.value)"
         />
-        <div class="align-items-center d-flex flex-grow-1 justify-content-end">
+        <div
+          class="align-items-center d-flex flex-grow-1 flex-wrap justify-content-end toggles"
+        >
+          @if (brokerHoldingsAsOf && holdingType === 'ACTIVE') {
+            <gf-toggle
+              [defaultValue]="holdingsSource"
+              [options]="holdingsSourceOptions"
+              (valueChange)="onChangeHoldingsSource($event.value)"
+            />
+          }
           <gf-toggle
             class="d-none d-lg-block"
             [defaultValue]="holdingType"
@@ -23,6 +32,21 @@
           />
         </div>
       </div>
+      @if (brokerHoldingsAsOf && holdingType === 'ACTIVE') {
+        <div class="holdings-source-hint mt-2 small text-muted text-right">
+          @if (holdingsSource === 'BROKER') {
+            <ng-container i18n
+              >Accounts synced through SnapTrade, as reported by your
+              brokerages, as of</ng-container
+            >
+            {{ brokerHoldingsAsOf | date: dateFormat() + ' HH:mm' }}
+          } @else {
+            <ng-container i18n
+              >As calculated by Ghostfolio from your activities</ng-container
+            >
+          }
+        </div>
+      }
       @if (holdingsViewMode === 'CHART') {
         <gf-treemap-chart
           class="mt-3"

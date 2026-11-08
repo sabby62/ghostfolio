@@ -7,6 +7,7 @@ import {
 import { RebalancingService } from '@ghostfolio/client/services/rebalancing/rebalancing.service';
 import { UserService } from '@ghostfolio/client/services/user/user.service';
 import { ConfirmationDialogType } from '@ghostfolio/common/enums';
+import { getDateFormatString } from '@ghostfolio/common/helper';
 import {
   LookupItem,
   PortfolioPosition,
@@ -19,6 +20,7 @@ import { DataService } from '@ghostfolio/ui/services';
 import { GfSymbolAutocompleteComponent } from '@ghostfolio/ui/symbol-autocomplete';
 import { GfValueComponent } from '@ghostfolio/ui/value';
 
+import { DatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import {
   ChangeDetectionStrategy,
@@ -71,6 +73,7 @@ interface GroupForm {
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'page' },
   imports: [
+    DatePipe,
     FormsModule,
     GfSymbolAutocompleteComponent,
     GfValueComponent,
@@ -93,6 +96,7 @@ interface GroupForm {
 export class GfRebalancingPageComponent {
   protected accounts: AccountWithValue[] = [];
   protected allowFractionalShares = false;
+  protected dateFormat = getDateFormatString();
   protected drift?: RebalancingDrift;
   protected readonly driftColumns = [
     'holding',
@@ -141,6 +145,7 @@ export class GfRebalancingPageComponent {
           const isFirstUser = !this.user;
 
           this.user = state.user;
+          this.dateFormat = getDateFormatString(this.user.settings?.locale);
           this.hasPermissionToUpdate = hasPermission(
             this.user.permissions,
             permissions.updateRebalancing

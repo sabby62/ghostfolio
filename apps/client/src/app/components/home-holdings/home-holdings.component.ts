@@ -1,9 +1,11 @@
+import { SnapTradeService } from '@ghostfolio/client/services/snaptrade/snaptrade.service';
 import { UserService } from '@ghostfolio/client/services/user/user.service';
 import {
   DEFAULT_CURRENCY,
   DEFAULT_DATE_RANGE,
   DEFAULT_LOCALE
 } from '@ghostfolio/common/config';
+import { getDateFormatString } from '@ghostfolio/common/helper';
 import {
   AssetProfileIdentifier,
   PortfolioPosition,
@@ -22,6 +24,7 @@ import { DataService } from '@ghostfolio/ui/services';
 import { GfToggleComponent } from '@ghostfolio/ui/toggle';
 import { GfTreemapChartComponent } from '@ghostfolio/ui/treemap-chart';
 
+import { DatePipe } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
@@ -39,10 +42,18 @@ import { Router, RouterModule } from '@angular/router';
 import { addIcons } from 'ionicons';
 import { gridOutline, reorderFourOutline } from 'ionicons/icons';
 import { DeviceDetectorService } from 'ngx-device-detector';
+import { catchError, of } from 'rxjs';
+
+/**
+ * BROKER: the holdings as reported by the brokerages (synced through
+ * SnapTrade), GHOSTFOLIO: the holdings as calculated from the activities
+ */
+type HoldingsSource = 'BROKER' | 'GHOSTFOLIO';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    DatePipe,
     GfHoldingsTableComponent,
     GfToggleComponent,
     GfTreemapChartComponent,
@@ -57,12 +68,18 @@ import { DeviceDetectorService } from 'ngx-device-detector';
 export class GfHomeHoldingsComponent implements OnInit {
   public static DEFAULT_HOLDINGS_VIEW_MODE: HoldingsViewMode = 'TABLE';
 
+  protected brokerHoldingsAsOf: Date | null = null;
+
   protected readonly baseCurrency = computed(() => {
     return this.user()?.settings?.baseCurrency ?? DEFAULT_CURRENCY;
   });
 
   protected readonly colorScheme = computed(() => {
     return this.user()?.settings?.colorScheme;
+  });
+
+  protected readonly dateFormat = computed(() => {
+    return getDateFormatString(this.locale());
   });
 
   protected readonly dateRange = computed(() => {
@@ -91,6 +108,11 @@ export class GfHomeHoldingsComponent implements OnInit {
         value: 'CHART'
       }
     ];
+  protected holdingsSource: HoldingsSource = 'BROKER';
+  protected readonly holdingsSourceOptions: ToggleOption<HoldingsSource>[] = [
+    { label: $localize`Broker`, value: 'BROKER' },
+    { label: $localize`Ghostfolio`, value: 'GHOSTFOLIO' }
+  ];
   protected holdingType: HoldingType = 'ACTIVE';
   protected readonly holdingTypeOptions: ToggleOption<HoldingType>[] = [
     { label: $localize`Active`, value: 'ACTIVE' },
@@ -111,6 +133,7 @@ export class GfHomeHoldingsComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
   private readonly deviceDetectorService = inject(DeviceDetectorService);
   private readonly router = inject(Router);
+  private readonly snapTradeService = inject(SnapTradeService);
   private readonly userService = inject(UserService);
 
   public constructor() {
@@ -160,6 +183,12 @@ export class GfHomeHoldingsComponent implements OnInit {
       });
   }
 
+  protected onChangeHoldingsSource(aHoldingsSource: HoldingsSource) {
+    this.holdingsSource = aHoldingsSource;
+
+    this.initialize();
+  }
+
   protected onChangeHoldingType(aHoldingType: HoldingType) {
     this.holdingType = aHoldingType;
 
@@ -206,6 +235,35 @@ export class GfHomeHoldingsComponent implements OnInit {
 
     this.holdings = undefined;
 
+    if (this.holdingType !== 'ACTIVE') {
+      this.showGhostfolioHoldings();
+
+      return;
+    }
+
+    // The brokerages report the active holdings only
+    this.snapTradeService
+      .fetchHoldings({ filters: this.userService.getFilters() })
+      .pipe(
+        catchError(() => {
+          return of({ asOf: null, holdings: [] });
+        }),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe(({ asOf, holdings }) => {
+        this.brokerHoldingsAsOf = asOf;
+
+        if (asOf && this.holdingsSource === 'BROKER') {
+          this.holdings = holdings;
+
+          this.changeDetectorRef.markForCheck();
+        } else {
+          this.showGhostfolioHoldings();
+        }
+      });
+  }
+
+  private showGhostfolioHoldings() {
     this.fetchHoldings()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(({ holdings }) => {

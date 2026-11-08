@@ -3,6 +3,7 @@ import { ConfigurationService } from '@ghostfolio/api/services/configuration/con
 import { Injectable } from '@nestjs/common';
 import {
   Account,
+  AccountPosition,
   AccountUniversalActivity,
   Balance,
   BrokerageAuthorization,
@@ -120,6 +121,33 @@ export class SnapTradeClientService {
     }
 
     return redirectURI;
+  }
+
+  public async getPositions({
+    accountId,
+    credentials
+  }: {
+    accountId: string;
+    credentials: SnapTradeUserCredentials;
+  }): Promise<{ asOf?: Date; positions: AccountPosition[] }> {
+    const { data } =
+      await this.getApi().accountInformation.getAllAccountPositions({
+        ...this.getCredentialParameters(credentials),
+        accountId
+      } as never);
+
+    const asOf = data?.data_freshness?.as_of
+      ? new Date(data.data_freshness.as_of)
+      : undefined;
+
+    return {
+      asOf: asOf && !isNaN(asOf.getTime()) ? asOf : undefined,
+      // Some versions of the API name the list "positions"
+      positions:
+        data?.results ??
+        ((data as Record<string, unknown>)?.positions as AccountPosition[]) ??
+        []
+    };
   }
 
   public isEnabled() {

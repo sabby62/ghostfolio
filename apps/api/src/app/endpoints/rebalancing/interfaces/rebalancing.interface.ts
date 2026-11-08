@@ -81,6 +81,18 @@ export interface RebalancingPlan {
   warnings: string[];
 }
 
+/**
+ * Where the holdings come from: as reported by the brokerages (synced through
+ * SnapTrade), as calculated by Ghostfolio from the activities or both
+ */
+export interface RebalancingHoldingsSource {
+  /** The oldest time of the data of the brokerages */
+  asOf: Date | null;
+  /** The accounts of which the holdings are taken from the brokerage */
+  brokerAccountIds: string[];
+  source: 'BROKER' | 'GHOSTFOLIO' | 'MIXED';
+}
+
 export interface RebalancingGroupResponse {
   accountIds: string[];
   baseCurrency?: string;

@@ -282,6 +282,36 @@
         </div>
       </div>
 
+      @if (drift.holdingsSource; as holdingsSource) {
+        <p class="small text-muted">
+          @switch (holdingsSource.source) {
+            @case ('BROKER') {
+              <ng-container i18n
+                >Holdings as reported by your brokerages, as of</ng-container
+              >
+              {{ holdingsSource.asOf | date: dateFormat + ' HH:mm' }}
+            }
+            @case ('MIXED') {
+              <ng-container i18n
+                >Holdings as reported by your brokerages for the synced accounts
+                ({{ getAccountNames(holdingsSource.brokerAccountIds) }}, as
+                of</ng-container
+              >
+              {{ holdingsSource.asOf | date: dateFormat + ' HH:mm' }}), as
+              <ng-container i18n
+                >calculated by Ghostfolio for the other accounts</ng-container
+              >
+            }
+            @default {
+              <ng-container i18n
+                >Holdings as calculated by Ghostfolio from your
+                activities</ng-container
+              >
+            }
+          }
+        </p>
+      }
+
       <div class="mb-5 overflow-x-auto">
         <table class="gf-table w-100" mat-table [dataSource]="drift.positions">
           <ng-container matColumnDef="holding">

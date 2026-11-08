@@ -28,8 +28,16 @@ export interface RebalancingDriftPosition {
   valueInBaseCurrency: number;
 }
 
+export interface RebalancingHoldingsSource {
+  /** The oldest time of the data of the brokerages */
+  asOf: string | null;
+  brokerAccountIds: string[];
+  source: 'BROKER' | 'GHOSTFOLIO' | 'MIXED';
+}
+
 export interface RebalancingDrift {
   baseCurrency?: string;
+  holdingsSource?: RebalancingHoldingsSource;
   cash: {
     currentInPercentage: number;
     driftInPercentage: number;

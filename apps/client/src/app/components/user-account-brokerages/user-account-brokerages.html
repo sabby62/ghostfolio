@@ -221,7 +221,16 @@
                 · <span i18n>Cash balance</span>:
                 {{ result.balance.toFixed(2) }} {{ result.currency }}
               }
+              @if (result.positions !== undefined) {
+                · <span i18n>Positions</span>: {{ result.positions }}
+              }
             </div>
+            @if (result.positionsError) {
+              <div class="small text-danger">
+                <span i18n>Positions could not be synced</span>:
+                {{ result.positionsError }}
+              </div>
+            }
             @for (entry of getSkippedEntries(result); track entry[0]) {
               <div class="small text-muted">
                 <span i18n>Skipped</span> ({{ entry[1] }}): {{ entry[0] }}

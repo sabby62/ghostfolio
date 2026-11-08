@@ -74,21 +74,19 @@ export class GfHoldingsTableComponent {
       return ['icon', 'nameWithSymbol', 'performanceInPercentage'];
     }
 
-    const columns = ['icon', 'nameWithSymbol', 'dateOfFirstActivity'];
+    const columns = ['icon', 'nameWithSymbol'];
 
     if (this.hasPermissionToShowQuantities()) {
       columns.push('quantity');
     }
 
     if (this.hasPermissionToShowValues()) {
-      columns.push('averagePrice', 'investmentWithCurrencyEffect');
-      columns.push('valueInBaseCurrency');
-    }
-
-    columns.push('allocationInPercentage');
-
-    if (this.hasPermissionToShowValues()) {
-      columns.push('performance');
+      columns.push(
+        'valueInBaseCurrency',
+        'marketPrice',
+        'averagePrice',
+        'performance'
+      );
     }
 
     columns.push('performanceInPercentage');
@@ -103,9 +101,14 @@ export class GfHoldingsTableComponent {
   });
 
   protected readonly sortActive = computed(() => {
-    return this.mode() === 'default'
-      ? 'allocationInPercentage'
-      : 'assetProfile.name';
+    if (this.mode() === 'simple') {
+      return 'assetProfile.name';
+    }
+
+    // The largest holding first, by its performance if the values are hidden
+    return this.hasPermissionToShowValues()
+      ? 'valueInBaseCurrency'
+      : 'netPerformancePercentWithCurrencyEffect';
   });
 
   protected readonly sortDirection = computed<SortDirection>(() => {

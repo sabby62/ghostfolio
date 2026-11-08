@@ -13,7 +13,7 @@ export interface HoldingsTableItem
       Pick<
         PortfolioPosition,
         | 'averagePrice'
-        | 'investmentWithCurrencyEffect'
+        | 'marketPrice'
         | 'netPerformanceWithCurrencyEffect'
         | 'quantity'
         | 'valueInBaseCurrency'

@@ -1,0 +1,119 @@
+<gf-dialog-header
+  [deviceType]="data.deviceType"
+  [title]="data.name"
+  (closeButtonClicked)="onClose()"
+/>
+
+<div class="flex-grow-1" mat-dialog-content>
+  <p class="text-muted">
+    {{ data.chartName }} ·
+    <ng-container i18n>Holdings which make up this part</ng-container>
+  </p>
+
+  @if (items.length === 0) {
+    <p class="text-muted" i18n>No holdings found.</p>
+  } @else {
+    <div class="overflow-x-auto">
+      <table class="gf-table w-100" mat-table [dataSource]="items">
+        <ng-container matColumnDef="holding">
+          <th *matHeaderCellDef class="px-1" i18n mat-header-cell>Holding</th>
+          <td *matCellDef="let element" class="px-1" mat-cell>
+            <div class="text-truncate">{{ element.name }}</div>
+            <div class="small text-muted">{{ element.symbol }}</div>
+          </td>
+          <td *matFooterCellDef class="px-1" i18n mat-footer-cell>Total</td>
+        </ng-container>
+
+        <ng-container matColumnDef="weight">
+          <th
+            *matHeaderCellDef
+            class="px-1 text-end"
+            i18n
+            i18n-title
+            mat-header-cell
+            title="The share of the holding in this part"
+          >
+            Exposure
+          </th>
+          <td *matCellDef="let element" class="px-1" mat-cell>
+            <gf-value
+              class="justify-content-end"
+              [isPercent]="true"
+              [locale]="data.locale"
+              [value]="element.weight"
+            />
+          </td>
+          <td *matFooterCellDef class="px-1" mat-footer-cell></td>
+        </ng-container>
+
+        <ng-container matColumnDef="value">
+          <th *matHeaderCellDef class="px-1 text-end" mat-header-cell>
+            @if (data.isInPercentage) {
+              <ng-container i18n>Of Portfolio</ng-container>
+            } @else {
+              <ng-container i18n>Value</ng-container>
+            }
+          </th>
+          <td *matCellDef="let element" class="px-1" mat-cell>
+            <gf-value
+              class="justify-content-end"
+              [isCurrency]="!data.isInPercentage"
+              [isPercent]="data.isInPercentage"
+              [locale]="data.locale"
+              [unit]="data.isInPercentage ? '' : data.baseCurrency"
+              [value]="element.value"
+            />
+          </td>
+          <td *matFooterCellDef class="px-1" mat-footer-cell>
+            <gf-value
+              class="justify-content-end"
+              [isCurrency]="!data.isInPercentage"
+              [isPercent]="data.isInPercentage"
+              [locale]="data.locale"
+              [unit]="data.isInPercentage ? '' : data.baseCurrency"
+              [value]="total"
+            />
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="shareOfCategory">
+          <th
+            *matHeaderCellDef
+            class="px-1 text-end"
+            i18n
+            i18n-title
+            mat-header-cell
+            title="The share of this part which comes from the holding"
+          >
+            Of This Part
+          </th>
+          <td *matCellDef="let element" class="px-1" mat-cell>
+            <gf-value
+              class="justify-content-end"
+              [isPercent]="true"
+              [locale]="data.locale"
+              [value]="getShareOfCategory(element)"
+            />
+          </td>
+          <td *matFooterCellDef class="px-1" mat-footer-cell>
+            <gf-value
+              class="justify-content-end"
+              [isPercent]="true"
+              [locale]="data.locale"
+              [value]="1"
+            />
+          </td>
+        </ng-container>
+
+        <tr *matHeaderRowDef="displayedColumns" mat-header-row></tr>
+        <tr
+          *matRowDef="let row; columns: displayedColumns"
+          mat-row
+          [class.cursor-pointer]="row.isClickable"
+          (click)="onHoldingClicked(row)"
+        ></tr>
+        <tr *matFooterRowDef="displayedColumns" mat-footer-row></tr>
+      </table>
+    </div>
+  }
+</div>

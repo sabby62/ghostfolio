@@ -1,0 +1,13 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+
+  .cursor-pointer {
+    cursor: pointer;
+  }
+
+  .mat-mdc-footer-cell {
+    font-weight: 600;
+  }
+}

@@ -65,12 +65,14 @@
         </mat-card-header>
         <mat-card-content>
           <gf-portfolio-proportion-chart
+            cursor="pointer"
             [baseCurrency]="user?.settings?.baseCurrency"
             [colorScheme]="user?.settings?.colorScheme"
             [data]="holdings"
             [isInPercentage]="showValuesInPercentage()"
             [keys]="['currency']"
             [locale]="user?.settings?.locale"
+            (categoryClicked)="onCategoryClicked('currency', $event)"
           />
         </mat-card-content>
       </mat-card>
@@ -87,12 +89,14 @@
         </mat-card-header>
         <mat-card-content>
           <gf-portfolio-proportion-chart
+            cursor="pointer"
             [baseCurrency]="user?.settings?.baseCurrency"
             [colorScheme]="user?.settings?.colorScheme"
             [data]="holdings"
             [isInPercentage]="showValuesInPercentage()"
             [keys]="['assetClassLabel', 'assetSubClassLabel']"
             [locale]="user?.settings?.locale"
+            (categoryClicked)="onCategoryClicked('assetClass', $event)"
           />
         </mat-card-content>
       </mat-card>
@@ -132,6 +136,7 @@
         </mat-card-header>
         <mat-card-content>
           <gf-portfolio-proportion-chart
+            cursor="pointer"
             [baseCurrency]="user?.settings?.baseCurrency"
             [colorScheme]="user?.settings?.colorScheme"
             [data]="sectors"
@@ -139,6 +144,7 @@
             [keys]="['name']"
             [locale]="user?.settings?.locale"
             [maxItems]="10"
+            (categoryClicked)="onCategoryClicked('sector', $event)"
           />
         </mat-card-content>
       </mat-card>
@@ -155,12 +161,14 @@
         </mat-card-header>
         <mat-card-content>
           <gf-portfolio-proportion-chart
+            cursor="pointer"
             [baseCurrency]="user?.settings?.baseCurrency"
             [colorScheme]="user?.settings?.colorScheme"
             [data]="continents"
             [isInPercentage]="showValuesInPercentage()"
             [keys]="['name']"
             [locale]="user?.settings?.locale"
+            (categoryClicked)="onCategoryClicked('continent', $event)"
           />
         </mat-card-content>
       </mat-card>
@@ -177,11 +185,13 @@
         </mat-card-header>
         <mat-card-content>
           <gf-portfolio-proportion-chart
+            cursor="pointer"
             [baseCurrency]="user?.settings?.baseCurrency"
             [colorScheme]="user?.settings?.colorScheme"
             [data]="marketsAdvanced"
             [isInPercentage]="showValuesInPercentage()"
             [locale]="user?.settings?.locale"
+            (categoryClicked)="onCategoryClicked('market', $event)"
           />
         </mat-card-content>
       </mat-card>
@@ -268,6 +278,7 @@
         </mat-card-header>
         <mat-card-content>
           <gf-portfolio-proportion-chart
+            cursor="pointer"
             [baseCurrency]="user?.settings?.baseCurrency"
             [colorScheme]="user?.settings?.colorScheme"
             [data]="countries"
@@ -275,6 +286,7 @@
             [keys]="['name']"
             [locale]="user?.settings?.locale"
             [maxItems]="10"
+            (categoryClicked)="onCategoryClicked('country', $event)"
           />
         </mat-card-content>
       </mat-card>
@@ -310,12 +322,14 @@
         </mat-card-header>
         <mat-card-content>
           <gf-portfolio-proportion-chart
+            cursor="pointer"
             [baseCurrency]="user?.settings?.baseCurrency"
             [colorScheme]="user?.settings?.colorScheme"
             [data]="holdings"
             [isInPercentage]="showValuesInPercentage()"
             [keys]="['etfProvider']"
             [locale]="user?.settings?.locale"
+            (categoryClicked)="onCategoryClicked('etfProvider', $event)"
           />
         </mat-card-content>
       </mat-card>

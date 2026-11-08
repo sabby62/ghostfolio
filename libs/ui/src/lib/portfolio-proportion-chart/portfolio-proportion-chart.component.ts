@@ -34,7 +34,10 @@ import { NgxSkeletonLoaderModule } from 'ngx-skeleton-loader';
 import OpenColor from 'open-color';
 
 import { onPrefersColorSchemeChange } from '../chart';
-import { PortfolioProportionChartClickEvent } from './interfaces/interfaces';
+import {
+  PortfolioProportionChartCategoryClickEvent,
+  PortfolioProportionChartClickEvent
+} from './interfaces/interfaces';
 
 const {
   blue,
@@ -81,8 +84,20 @@ export class GfPortfolioProportionChartComponent
   public chart: Chart<'doughnut'>;
   public isLoading = true;
 
+  /**
+   * Emits the clicked category, e.g. a currency or a sector
+   */
+  protected readonly categoryClicked =
+    output<PortfolioProportionChartCategoryClickEvent>();
+
   protected readonly proportionChartClicked =
     output<PortfolioProportionChartClickEvent>();
+
+  /** The categories of the chart in the order of the slices */
+  private categories: PortfolioProportionChartCategoryClickEvent[] = [];
+
+  /** The subcategories of the chart in the order of the slices */
+  private subCategories: PortfolioProportionChartCategoryClickEvent[] = [];
 
   private readonly OTHER_KEY = 'OTHER';
 
@@ -117,6 +132,25 @@ export class GfPortfolioProportionChartComponent
 
   public ngOnDestroy() {
     this.chart?.destroy();
+  }
+
+  private emitCategoryClicked(activeElement?: {
+    datasetIndex: number;
+    index: number;
+  }) {
+    if (!activeElement || this.categories.length === 0) {
+      return;
+    }
+
+    // With two keys, the first dataset is the ring of the subcategories
+    const category =
+      this.keys[1] && activeElement.datasetIndex === 0
+        ? this.subCategories[activeElement.index]
+        : this.categories[activeElement.index];
+
+    if (category && category.keys.length > 0) {
+      this.categoryClicked.emit(category);
+    }
   }
 
   private initialize() {
@@ -238,12 +272,18 @@ export class GfPortfolioProportionChartComponent
       })
       .reverse();
 
+    let otherKeys: string[] = [];
+
     if (this.maxItems && chartDataSorted.length > this.maxItems) {
       // Add surplus items to OTHER group
       const rest = chartDataSorted.splice(
         this.maxItems,
         chartDataSorted.length - 1
       );
+
+      otherKeys = rest.map(([key]) => {
+        return key;
+      });
 
       chartDataSorted.push([
         this.OTHER_KEY,
@@ -279,14 +319,28 @@ export class GfPortfolioProportionChartComponent
       }
     });
 
+    this.categories = chartDataSorted.map(([key, { name }]) => {
+      return {
+        keys: key === this.OTHER_KEY ? otherKeys : [key],
+        name: key === this.OTHER_KEY || key === UNKNOWN_KEY ? key : name
+      };
+    });
+    this.subCategories = [];
+
     const backgroundColorSubCategory: string[] = [];
     const dataSubCategory: number[] = [];
     const labelSubCategory: string[] = [];
 
-    chartDataSorted.forEach(([, item]) => {
+    chartDataSorted.forEach(([key, item]) => {
       let lightnessRatio = 0.2;
 
       Object.keys(item.subCategory ?? {}).forEach((subCategory) => {
+        this.subCategories.push({
+          subCategory,
+          keys: [key],
+          name: `${item.name} · ${subCategory}`
+        });
+
         if (item.name === UNKNOWN_KEY) {
           backgroundColorSubCategory.push(item.color ?? '');
         } else {
@@ -364,6 +418,8 @@ export class GfPortfolioProportionChartComponent
               padding: this.showLabels === true ? 100 : 0
             },
             onClick: (_, activeElements, chart) => {
+              this.emitCategoryClicked(activeElements[0]);
+
               try {
                 const dataIndex = activeElements[0].index;
                 const symbol = chart.data.labels?.[dataIndex] as string;

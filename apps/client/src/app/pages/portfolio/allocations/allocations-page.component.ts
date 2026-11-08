@@ -3,6 +3,12 @@ import {
   AccountDetailDialogParams,
   AccountDetailDialogResult
 } from '@ghostfolio/client/components/account-detail-dialog/interfaces/interfaces';
+import { GfAllocationDetailDialogComponent } from '@ghostfolio/client/components/allocation-detail-dialog/allocation-detail-dialog.component';
+import {
+  AllocationDetailDialogParams,
+  AllocationDetailDialogResult,
+  AllocationDetailItem
+} from '@ghostfolio/client/components/allocation-detail-dialog/interfaces/interfaces';
 import { ImpersonationStorageService } from '@ghostfolio/client/services/impersonation-storage.service';
 import { UserService } from '@ghostfolio/client/services/user/user.service';
 import { MAX_TOP_HOLDINGS, UNKNOWN_KEY } from '@ghostfolio/common/config';
@@ -32,6 +38,7 @@ import {
 import { translate } from '@ghostfolio/ui/i18n';
 import {
   GfPortfolioProportionChartComponent,
+  PortfolioProportionChartCategoryClickEvent,
   PortfolioProportionChartClickEvent
 } from '@ghostfolio/ui/portfolio-proportion-chart';
 import { GfPremiumIndicatorComponent } from '@ghostfolio/ui/premium-indicator';
@@ -59,6 +66,18 @@ import { DeviceDetectorService } from 'ngx-device-detector';
 import { filter, switchMap, tap } from 'rxjs';
 
 import { AllocationsPageParams } from './interfaces/interfaces';
+
+/**
+ * The charts whose categories list the holdings they are made of
+ */
+type AllocationChart =
+  | 'assetClass'
+  | 'continent'
+  | 'country'
+  | 'currency'
+  | 'etfProvider'
+  | 'market'
+  | 'sector';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -213,6 +232,129 @@ export class GfAllocationsPageComponent implements OnInit {
         queryParams: { accountId, accountDetailDialog: true }
       });
     }
+  }
+
+  protected onCategoryClicked(
+    chart: AllocationChart,
+    { keys, name, subCategory }: PortfolioProportionChartCategoryClickEvent
+  ) {
+    const chartName = {
+      assetClass: $localize`By Asset Class`,
+      continent: $localize`By Continent`,
+      country: $localize`By Country`,
+      currency: $localize`By Currency`,
+      etfProvider: $localize`By ETF Provider`,
+      market: $localize`By Market`,
+      sector: $localize`By Sector`
+    }[chart];
+
+    // The charts with keys compare the values of the keys in upper case
+    const isKeyMatch = (value?: string | null) => {
+      // An empty value is unknown as well
+      const key = [value ?? '', UNKNOWN_KEY].find((candidate) => {
+        return candidate.length > 0;
+      });
+
+      return !!key && (keys.includes(key) || keys.includes(key.toUpperCase()));
+    };
+
+    const items: AllocationDetailItem[] = [];
+
+    for (const position of this.portfolioDetails.holdings) {
+      const holding =
+        this.holdings[getAssetProfileIdentifier(position.assetProfile)];
+      const isCash = isCashPosition(position.assetProfile);
+      const { countries = [], sectors = [] } = position.assetProfile;
+
+      let weight = 0;
+
+      switch (chart) {
+        case 'assetClass':
+          weight =
+            isKeyMatch(holding?.assetClassLabel) &&
+            (!subCategory || holding?.assetSubClassLabel === subCategory)
+              ? 1
+              : 0;
+          break;
+        case 'continent':
+          weight = isCash
+            ? 0
+            : countries.length > 0
+              ? countries
+                  .filter(({ continent }) => {
+                    return isKeyMatch(translate(continent));
+                  })
+                  .reduce((sum, { weight: countryWeight }) => {
+                    return sum + countryWeight;
+                  }, 0)
+              : isKeyMatch(UNKNOWN_KEY)
+                ? 1
+                : 0;
+          break;
+        case 'country':
+          weight = isCash
+            ? 0
+            : countries.length > 0
+              ? countries
+                  .filter(({ code }) => {
+                    return isKeyMatch(getCountryName({ code }));
+                  })
+                  .reduce((sum, { weight: countryWeight }) => {
+                    return sum + countryWeight;
+                  }, 0)
+              : isKeyMatch(UNKNOWN_KEY)
+                ? 1
+                : 0;
+          break;
+        case 'currency':
+          weight = isKeyMatch(holding?.currency) ? 1 : 0;
+          break;
+        case 'etfProvider':
+          weight = isKeyMatch(holding?.etfProvider) ? 1 : 0;
+          break;
+        case 'market':
+          weight = isCash
+            ? 0
+            : keys.reduce((sum, key) => {
+                return (
+                  sum + (position.marketsAdvanced?.[key as MarketAdvanced] ?? 0)
+                );
+              }, 0);
+          break;
+        case 'sector':
+          weight = isCash
+            ? 0
+            : sectors.length > 0
+              ? sectors
+                  .filter(({ name: sectorName }) => {
+                    return isKeyMatch(translate(sectorName));
+                  })
+                  .reduce((sum, { weight: sectorWeight }) => {
+                    return sum + sectorWeight;
+                  }, 0)
+              : isKeyMatch(UNKNOWN_KEY)
+                ? 1
+                : 0;
+          break;
+      }
+
+      if (weight > 0) {
+        items.push({
+          weight,
+          dataSource: position.assetProfile.dataSource,
+          isClickable: canOpenHoldingDetail(position),
+          name: getHoldingName(position.assetProfile),
+          symbol: position.assetProfile.symbol,
+          value: weight * this.extractValue(position)
+        });
+      }
+    }
+
+    this.openAllocationDetailDialog({
+      chartName,
+      items,
+      name: name === UNKNOWN_KEY || name === 'OTHER' ? translate(name) : name
+    });
   }
 
   protected onSymbolChartClicked(event: PortfolioProportionChartClickEvent) {
@@ -648,6 +790,49 @@ export class GfAllocationsPageComponent implements OnInit {
     }
 
     return name.trim().toLowerCase();
+  }
+
+  private openAllocationDetailDialog({
+    chartName,
+    items,
+    name
+  }: Pick<AllocationDetailDialogParams, 'chartName' | 'items' | 'name'>) {
+    const dialogRef = this.dialog.open<
+      GfAllocationDetailDialogComponent,
+      AllocationDetailDialogParams,
+      AllocationDetailDialogResult
+    >(GfAllocationDetailDialogComponent, {
+      autoFocus: false,
+      data: {
+        chartName,
+        items,
+        name,
+        baseCurrency: this.user?.settings?.baseCurrency,
+        deviceType: this.deviceType(),
+        isInPercentage: this.showValuesInPercentage() ?? false,
+        locale: this.user?.settings?.locale
+      },
+      height: this.deviceType() === 'mobile' ? '98dvh' : undefined,
+      maxHeight: '80vh',
+      panelClass:
+        this.deviceType() === 'mobile' ? 'gf-mobile-dialog' : undefined,
+      width: this.deviceType() === 'mobile' ? '100vw' : '40rem'
+    });
+
+    dialogRef
+      .afterClosed()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((result) => {
+        if (result?.dataSource && result.symbol) {
+          void this.router.navigate([], {
+            queryParams: {
+              dataSource: result.dataSource,
+              holdingDetailDialog: true,
+              symbol: result.symbol
+            }
+          });
+        }
+      });
   }
 
   private openAccountDetailDialog(aAccountId: string) {

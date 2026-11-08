@@ -1,3 +1,4 @@
+import { AccountBalanceDto } from './account-balance.dto';
 import { AuthDeviceDto } from './auth-device.dto';
 import { CalculateRebalancingDto } from './calculate-rebalancing.dto';
 import { CountryDto } from './country.dto';
@@ -40,6 +41,7 @@ import { UpdateTagDto } from './update-tag.dto';
 import { UpdateUserSettingDto } from './update-user-setting.dto';
 
 export {
+  AccountBalanceDto,
   AuthDeviceDto,
   CalculateRebalancingDto,
   CountryDto,

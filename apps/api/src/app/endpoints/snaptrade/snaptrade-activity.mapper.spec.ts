@@ -373,9 +373,10 @@ describe('mapSnapTradeActivity', () => {
         type: 'SELL'
       }
     });
+    // The book value of 5,132.22 USD at 1.3747 CAD per USD
     expect(
       'activity' in journalOut && journalOut.activity.unitPrice
-    ).toBeCloseTo(10.26444, 5);
+    ).toBeCloseTo(14.11053, 4);
 
     expect(journalIn).toMatchObject({
       activity: {
@@ -386,9 +387,42 @@ describe('mapSnapTradeActivity', () => {
       }
     });
     expect('activity' in journalIn && journalIn.activity.unitPrice).toBeCloseTo(
-      7.46667,
+      10.26444,
       4
     );
+  });
+
+  it('maps a journal from the USD to the CAD listing', () => {
+    const activities = enrichJournalActivities([
+      {
+        amount: 0,
+        currency: { code: 'USD' },
+        description: 'GLOBAL X US DLR CURRENCY ETF JOURNAL POSITION TO CAD',
+        id: 'journal-out',
+        price: 0,
+        symbol: { currency: { code: 'USD' }, symbol: 'DLR.U.TO' },
+        trade_date: '2025-12-23T05:00:00Z',
+        type: 'BRW',
+        units: -100
+      },
+      {
+        amount: 0,
+        currency: { code: 'CAD' },
+        description:
+          'GLOBAL X US DLR CURRENCY ETF JOURNAL POSITION FROM USD BOOK VALUE: $1400.00 CNV@ 1.4000',
+        id: 'journal-in',
+        price: 0,
+        symbol: { currency: { code: 'CAD' }, symbol: 'DLR.TO' },
+        trade_date: '2025-12-23T05:00:00Z',
+        type: 'BRW',
+        units: 100
+      }
+    ]);
+
+    const [journalOut, journalIn] = activities;
+
+    expect(journalOut.price).toBeCloseTo(10, 6);
+    expect(journalIn.price).toBeCloseTo(14, 6);
   });
 
   it('skips a journal without book value', () => {

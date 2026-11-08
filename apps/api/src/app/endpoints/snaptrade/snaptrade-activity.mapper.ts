@@ -322,21 +322,41 @@ export function enrichJournalActivities(
       continue;
     }
 
+    // The rate of the conversion in CAD per USD
     const exchangeRate = parseNumber(
       /CNV@\s*([\d.]+)/i.exec(incoming.description ?? '')?.[1]
     );
 
-    const getPrice = (activity: SnapTradeActivity) => {
-      const currency = (
+    const getCurrency = (activity: SnapTradeActivity) => {
+      return (
         activity.currency?.code ?? activity.symbol?.currency?.code
       )?.toUpperCase();
+    };
+
+    // The book value is in the currency of the incoming position
+    const incomingCurrency = getCurrency(incoming);
+
+    const getPrice = (activity: SnapTradeActivity) => {
+      const currency = getCurrency(activity);
       const quantity = Math.abs(activity.units);
 
-      if (currency === 'CAD') {
+      if (currency === incomingCurrency) {
         return bookValue / quantity;
       }
 
-      return exchangeRate > 0 ? bookValue / exchangeRate / quantity : undefined;
+      if (!(exchangeRate > 0)) {
+        return undefined;
+      }
+
+      if (incomingCurrency === 'USD' && currency === 'CAD') {
+        return (bookValue * exchangeRate) / quantity;
+      }
+
+      if (incomingCurrency === 'CAD' && currency === 'USD') {
+        return bookValue / exchangeRate / quantity;
+      }
+
+      return undefined;
     };
 
     incoming.price = getPrice(incoming);

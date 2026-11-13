@@ -6,6 +6,7 @@ import type {
 } from '@ghostfolio/prisma/browser';
 import {
   AccessType,
+  AccountType,
   Type as ActivityType,
   AssetSubClass
 } from '@ghostfolio/prisma/enums';
@@ -618,6 +619,27 @@ export function isAccountBalanceInFuture({
   startOfUtcDateOfTomorrow?: Date;
 }) {
   return isAfter(date, startOfUtcDateOfTomorrow);
+}
+
+/**
+ * Derives the account type from the labels of a brokerage account, e.g. the
+ * raw type `TFSA` or the name `Individual RRSP`. All accounts which are
+ * neither a TFSA nor an RRSP are non-registered cash accounts.
+ */
+export function getAccountTypeFromLabels(
+  labels: (string | null | undefined)[]
+): AccountType {
+  const text = labels.filter(Boolean).join(' ').toUpperCase();
+
+  if (/\bTFSA\b/.test(text)) {
+    return AccountType.TFSA;
+  }
+
+  if (/\b(RRSP|RSP)\b/.test(text)) {
+    return AccountType.RRSP;
+  }
+
+  return AccountType.CASH;
 }
 
 export function isAccountExcluded(account?: { tags?: { id: string }[] }) {

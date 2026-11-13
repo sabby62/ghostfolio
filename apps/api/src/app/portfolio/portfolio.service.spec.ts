@@ -25,7 +25,7 @@ import {
 } from '@ghostfolio/common/interfaces';
 import { AccountWithBalance, DateRange } from '@ghostfolio/common/types';
 
-import { AssetClass, DataSource, Prisma } from '@prisma/client';
+import { AccountType, AssetClass, DataSource, Prisma } from '@prisma/client';
 import { Big } from 'big.js';
 import { endOfDay } from 'date-fns';
 import { randomUUID } from 'node:crypto';
@@ -409,6 +409,7 @@ describe('PortfolioService', () => {
             id: randomUUID(),
             name: 'USD',
             platformId: null,
+            type: AccountType.CASH,
             updatedAt: parseDate('2024-01-01'),
             userId: userDummyData.id
           }
@@ -448,6 +449,7 @@ describe('PortfolioService', () => {
         id: randomUUID(),
         name: 'USD',
         platformId: null,
+        type: AccountType.CASH,
         updatedAt: parseDate('2024-01-01'),
         userId: userDummyData.id
       };

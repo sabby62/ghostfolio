@@ -1,10 +1,12 @@
 import { COMMENT_MAXIMUM_LENGTH } from '@ghostfolio/common/config';
 import { IsCurrencyCode } from '@ghostfolio/common/validators/is-currency-code';
+import { AccountType } from '@ghostfolio/prisma/enums';
 
 import { Transform, TransformFnParams } from 'class-transformer';
 import {
   ArrayUnique,
   IsArray,
+  IsEnum,
   IsNumber,
   IsOptional,
   IsString,
@@ -48,4 +50,8 @@ export class UpdateAccountDto {
   @IsOptional()
   @IsString({ each: true })
   tags?: string[];
+
+  @IsEnum(AccountType)
+  @IsOptional()
+  type?: AccountType;
 }

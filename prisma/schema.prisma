@@ -45,6 +45,8 @@ model Account {
   platformId        String?
   snapTradeAccounts SnapTradeAccount[]
   tags              TagsOnAccounts[]
+  /// The tax treatment of the account (TFSA, RRSP or non-registered cash)
+  type              AccountType        @default(CASH)
   updatedAt         DateTime           @updatedAt
   user              User               @relation(fields: [userId], onDelete: Cascade, references: [id])
   userId            String
@@ -53,6 +55,7 @@ model Account {
   @@index([currency])
   @@index([id])
   @@index([name])
+  @@index([type])
   @@index([userId])
 }
 
@@ -279,6 +282,8 @@ model SnapTradeAccount {
   name                     String?
   positions                SnapTradePosition[]
   positionsAsOf            DateTime?
+  /// The account type of the brokerage, e.g. TFSA, RRSP or Margin
+  rawType                  String?
   syncFromDate             DateTime?
   updatedAt                DateTime                    @updatedAt
 
@@ -440,6 +445,12 @@ enum AccessType {
   MCP
   PRIVATE
   PUBLIC
+}
+
+enum AccountType {
+  CASH
+  RRSP
+  TFSA
 }
 
 enum AssetClass {

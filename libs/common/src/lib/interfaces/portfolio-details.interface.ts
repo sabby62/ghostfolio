@@ -3,6 +3,7 @@ import {
   PortfolioSummary
 } from '@ghostfolio/common/interfaces';
 import { Market, MarketAdvanced } from '@ghostfolio/common/types';
+import type { AccountType } from '@ghostfolio/prisma/enums';
 
 export interface PortfolioDetails {
   accounts: {
@@ -12,6 +13,7 @@ export interface PortfolioDetails {
       name: string;
       /** Only set if the activities are filtered by a single holding */
       quantity?: number;
+      type?: AccountType;
       valueInBaseCurrency: number;
       valueInPercentage?: number;
     };

@@ -23,7 +23,7 @@ import { parseDate } from '@ghostfolio/common/helper';
 import { PortfolioSnapshotHolding } from '@ghostfolio/common/models';
 import { PerformanceCalculationType } from '@ghostfolio/common/types/performance-calculation-type.type';
 
-import { DataSource } from '@prisma/client';
+import { AccountType, DataSource } from '@prisma/client';
 import { Big } from 'big.js';
 import { eachDayOfInterval, isSameDay } from 'date-fns';
 import { randomUUID } from 'node:crypto';
@@ -190,6 +190,7 @@ describe('PortfolioCalculator (ROI)', () => {
             id: accountId,
             name: 'USD',
             platformId: null,
+            type: AccountType.CASH,
             updatedAt: parseDate('2023-12-31'),
             userId: userDummyData.id
           }

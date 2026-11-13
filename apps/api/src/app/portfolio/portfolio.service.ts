@@ -2488,6 +2488,7 @@ export class PortfolioService {
           balance: account.balance,
           currency: account.currency,
           name: account.name,
+          type: account.type,
           valueInBaseCurrency: balanceInBaseCurrency
         };
 
@@ -2546,6 +2547,7 @@ export class PortfolioService {
           currency: account?.currency,
           name: account?.name,
           quantity: quantityOfHolding,
+          type: account?.type,
           valueInBaseCurrency: valueOfAccountInBaseCurrency.toNumber()
         };
       }

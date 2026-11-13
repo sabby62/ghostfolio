@@ -15,6 +15,7 @@ import { hasPermission, permissions } from '@ghostfolio/common/permissions';
 import { internalRoutes } from '@ghostfolio/common/routes/routes';
 import { Scope, hasScope, scopes } from '@ghostfolio/common/scopes';
 import { AccountWithPlatform } from '@ghostfolio/common/types';
+import { AccountType } from '@ghostfolio/prisma/enums';
 import { NotificationService } from '@ghostfolio/ui/notifications';
 import { DataService } from '@ghostfolio/ui/services';
 
@@ -148,8 +149,16 @@ export class GfAccountDialogHostComponent implements OnDestroy, OnInit {
               return;
             }
 
-            const { balance, comment, currency, id, name, platformId, tags } =
-              account;
+            const {
+              balance,
+              comment,
+              currency,
+              id,
+              name,
+              platformId,
+              tags,
+              type
+            } = account;
 
             this.openCreateOrUpdateAccountDialog({
               user,
@@ -160,7 +169,8 @@ export class GfAccountDialogHostComponent implements OnDestroy, OnInit {
                 id,
                 name,
                 platformId,
-                tags
+                tags,
+                type
               },
               isUpdate: true
             });
@@ -186,7 +196,8 @@ export class GfAccountDialogHostComponent implements OnDestroy, OnInit {
               id: null,
               name: null,
               platformId: null,
-              tags: []
+              tags: [],
+              type: AccountType.CASH
             },
             isUpdate: false
           });

@@ -42,6 +42,7 @@ describe('SnapTradeService', () => {
     lastSyncedAt: null,
     name: 'TFSA',
     positionsAsOf: null,
+    rawType: 'TFSA',
     syncFromDate: new Date('2026-02-01T00:00:00.000Z'),
     updatedAt: new Date()
   };
@@ -509,6 +510,7 @@ describe('SnapTradeService', () => {
         data: {
           currency: 'CAD',
           name: 'Questrade TFSA',
+          type: 'TFSA',
           user: { connect: { id: userId } }
         }
       });

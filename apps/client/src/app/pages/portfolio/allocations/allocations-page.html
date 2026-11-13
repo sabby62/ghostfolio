@@ -313,6 +313,25 @@
     <div class="col-md-4">
       <mat-card appearance="outlined" class="mb-3">
         <mat-card-header class="overflow-hidden w-100">
+          <mat-card-title class="text-truncate" i18n
+            >By Account Type</mat-card-title
+          >
+        </mat-card-header>
+        <mat-card-content>
+          <gf-portfolio-proportion-chart
+            [baseCurrency]="user?.settings?.baseCurrency"
+            [colorScheme]="user?.settings?.colorScheme"
+            [data]="accountTypes"
+            [isInPercentage]="showValuesInPercentage()"
+            [keys]="['id']"
+            [locale]="user?.settings?.locale"
+          />
+        </mat-card-content>
+      </mat-card>
+    </div>
+    <div class="col-md-4">
+      <mat-card appearance="outlined" class="mb-3">
+        <mat-card-header class="overflow-hidden w-100">
           <mat-card-title class="align-items-center d-flex text-truncate">
             <span i18n>By ETF Provider</span>
             @if (user?.subscription?.type === 'Basic') {

@@ -6,6 +6,7 @@ import {
   canApplyFiltersToAccess,
   canUseCustomAssetProfileSymbol,
   extractNumberFromString,
+  getAccountTypeFromLabels,
   getCountryCodeFromCurrency,
   getEmojiFlag,
   getHoldingName,
@@ -868,5 +869,23 @@ describe('Helper', () => {
         viewMode: 'DEFAULT'
       });
     });
+  });
+});
+
+describe('getAccountTypeFromLabels', () => {
+  it.each([
+    [['TFSA', 'Wealthsimple Trade TFSA'], 'TFSA'],
+    [[null, 'TFSA Summit'], 'TFSA'],
+    [['RRSP', 'Individual RRSP'], 'RRSP'],
+    [['Group RSP'], 'RRSP'],
+    [['Margin', 'Individual Margin'], 'CASH'],
+    [['PERSONAL', 'Wealthsimple Trade PERSONAL'], 'CASH'],
+    [['MSB', 'Wealthsimple Trade MSB'], 'CASH'],
+    [['cash', 'Cash Account (3757)'], 'CASH'],
+    [['CRYPTO'], 'CASH'],
+    [['TFSAX'], 'CASH'],
+    [[], 'CASH']
+  ])('classifies %j as %s', (labels, expected) => {
+    expect(getAccountTypeFromLabels(labels)).toBe(expected);
   });
 });

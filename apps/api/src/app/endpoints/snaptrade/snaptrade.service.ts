@@ -12,6 +12,7 @@ import {
   CreateSnapTradeConnectionLinkDto,
   UpdateSnapTradeAccountDto
 } from '@ghostfolio/common/dtos';
+import { getAccountTypeFromLabels } from '@ghostfolio/common/helper';
 import { UserWithSettings } from '@ghostfolio/common/types';
 
 import { Injectable, Logger } from '@nestjs/common';
@@ -225,7 +226,8 @@ export class SnapTradeService {
         institutionUrl:
           urlByConnectionId.get(brokerageAccount.brokerage_authorization) ??
           null,
-        name: brokerageAccount.name ?? null
+        name: brokerageAccount.name ?? null,
+        rawType: brokerageAccount.raw_type ?? null
       };
 
       const snapTradeAccount = await this.prismaService.snapTradeAccount.upsert(
@@ -394,6 +396,10 @@ export class SnapTradeService {
           name: [snapTradeAccount.institutionName, snapTradeAccount.name]
             .filter(Boolean)
             .join(' '),
+          type: getAccountTypeFromLabels([
+            snapTradeAccount.rawType,
+            snapTradeAccount.name
+          ]),
           user: { connect: { id: userId } }
         }
       });

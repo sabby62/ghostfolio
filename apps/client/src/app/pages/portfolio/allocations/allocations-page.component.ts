@@ -31,6 +31,7 @@ import { hasScope, scopes } from '@ghostfolio/common/scopes';
 import { MarketAdvanced } from '@ghostfolio/common/types';
 import type { Account, Platform } from '@ghostfolio/prisma/browser';
 import {
+  AccountType,
   AssetClass,
   AssetSubClass,
   DataSource
@@ -100,6 +101,9 @@ export class GfAllocationsPageComponent implements OnInit {
       id: string;
       value: number;
     };
+  };
+  protected accountTypes: {
+    [type: string]: { id: string; name: string; value: number };
   };
   protected continents: {
     [code: string]: { name: string; value: number };
@@ -374,6 +378,19 @@ export class GfAllocationsPageComponent implements OnInit {
     );
   }
 
+  private getAccountTypeName(aAccountType: string) {
+    switch (aAccountType) {
+      case AccountType.CASH:
+        return $localize`Cash (non-registered)`;
+      case AccountType.RRSP:
+        return 'RRSP';
+      case AccountType.TFSA:
+        return 'TFSA';
+      default:
+        return aAccountType;
+    }
+  }
+
   private extractCurrency({
     assetClass,
     assetSubClass,
@@ -432,6 +449,7 @@ export class GfAllocationsPageComponent implements OnInit {
 
   private initialize() {
     this.accounts = {};
+    this.accountTypes = {};
     this.continents = {
       [UNKNOWN_KEY]: {
         name: UNKNOWN_KEY,
@@ -524,6 +542,19 @@ export class GfAllocationsPageComponent implements OnInit {
         name,
         value
       };
+
+      const accountType =
+        this.portfolioDetails.accounts[id].type ?? UNKNOWN_KEY;
+
+      if (this.accountTypes[accountType]) {
+        this.accountTypes[accountType].value += value;
+      } else {
+        this.accountTypes[accountType] = {
+          value,
+          id: accountType,
+          name: this.getAccountTypeName(accountType)
+        };
+      }
     }
 
     const topHoldingsMap: {

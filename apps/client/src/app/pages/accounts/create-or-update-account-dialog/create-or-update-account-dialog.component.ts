@@ -9,6 +9,7 @@ import { getStringOrNull } from '@ghostfolio/common/helper';
 import { hasPermission, permissions } from '@ghostfolio/common/permissions';
 import { validateObjectForForm } from '@ghostfolio/common/utils';
 import type { Platform, Tag } from '@ghostfolio/prisma/browser';
+import { AccountType } from '@ghostfolio/prisma/enums';
 import { GfCurrencySelectorComponent } from '@ghostfolio/ui/currency-selector';
 import { GfEntityLogoComponent } from '@ghostfolio/ui/entity-logo';
 import { translate } from '@ghostfolio/ui/i18n';
@@ -40,6 +41,7 @@ import {
 } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
 import { Observable } from 'rxjs';
 import { map, startWith } from 'rxjs/operators';
 
@@ -58,6 +60,7 @@ import { CreateOrUpdateAccountDialogParams } from './interfaces/interfaces';
     MatDialogModule,
     MatFormFieldModule,
     MatInputModule,
+    MatSelectModule,
     ReactiveFormsModule
   ],
   selector: 'gf-create-or-update-account-dialog',
@@ -68,6 +71,11 @@ export class GfCreateOrUpdateAccountDialogComponent {
   protected readonly COMMENT_MAXIMUM_LENGTH = COMMENT_MAXIMUM_LENGTH;
 
   protected accountForm: FormGroup;
+  protected readonly accountTypes = [
+    { label: 'TFSA', value: AccountType.TFSA },
+    { label: 'RRSP', value: AccountType.RRSP },
+    { label: $localize`Cash (non-registered)`, value: AccountType.CASH }
+  ];
   protected currencies: string[] = [];
   protected filteredPlatforms: Observable<Platform[]> | undefined;
   protected hasPermissionToCreateOwnTag: boolean;
@@ -130,7 +138,8 @@ export class GfCreateOrUpdateAccountDialogComponent {
             name: translate(name)
           };
         })
-      ]
+      ],
+      type: [this.data.account.type ?? AccountType.CASH, Validators.required]
     });
 
     this.accountForm
@@ -228,7 +237,8 @@ export class GfCreateOrUpdateAccountDialogComponent {
         })
         .map(({ id }: Tag) => {
           return id;
-        })
+        }),
+      type: this.accountForm.get('type')?.value
     };
 
     try {
